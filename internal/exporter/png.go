@@ -36,7 +36,8 @@ func BadgePNG(node domain.NodeState) ([]byte, error) {
 
 	lh := badgeFont.lineHeight(badgeFontScale)
 	name := truncateToWidth(node.Name, badgeWidth-8)
-	drawText(img, 4, lh-badgeFont.descent*badgeFontScale, name, textColor)
+	nameX := (badgeWidth - badgeFont.measure(name, badgeFontScale)) / 2
+	drawText(img, nameX, lh-badgeFont.descent*badgeFontScale, name, textColor)
 
 	y := lh + 4
 	if !node.Reachable {
@@ -44,10 +45,18 @@ func BadgePNG(node domain.NodeState) ([]byte, error) {
 		y += lh + 2
 		drawText(img, 4, y+badgeFont.ascent*badgeFontScale, truncateToWidth(node.LastError, badgeWidth-8), mutedColor)
 	} else {
-		y = drawMeter(img, 4, y, "CPU", node.CPU)
-		y = drawMeter(img, 4, y, "GPU", node.GPU)
-		y = drawMeter(img, 4, y, "MEM", node.MemUsed)
-		y = drawMeter(img, 4, y, "SWP", node.SwapUsed)
+		if node.Wants("cpu") {
+			y = drawMeter(img, 4, y, "CPU", node.CPU)
+		}
+		if node.Wants("gpu") {
+			y = drawMeter(img, 4, y, "GPU", node.GPU)
+		}
+		if node.Wants("mem") {
+			y = drawMeter(img, 4, y, "MEM", node.MemUsed)
+		}
+		if node.Wants("swap") {
+			y = drawMeter(img, 4, y, "SWP", node.SwapUsed)
+		}
 	}
 
 	var buf bytes.Buffer

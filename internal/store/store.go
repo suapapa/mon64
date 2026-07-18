@@ -198,6 +198,7 @@ func (s *Store) collectNodeState(ctx context.Context, node config.NodeConfig) do
 		Name:        node.Name,
 		CollectedAt: time.Now().UTC(),
 		Reachable:   true,
+		Collects:    node.CollectStrings(),
 	}
 	if node.Wants(config.CollectCPU) {
 		state.CPU = domain.Ptr(42)
@@ -216,19 +217,22 @@ func (s *Store) collectNodeState(ctx context.Context, node config.NodeConfig) do
 }
 
 func (s *Store) applyNodeStateLocked(state domain.NodeState) {
+	found := false
 	for i, n := range s.snap.Nodes {
 		if n.Name == state.Name {
 			s.snap.Nodes[i] = state
-			if state.CollectedAt.After(s.snap.CollectedAt) {
-				s.snap.CollectedAt = state.CollectedAt
-			}
-			return
+			found = true
+			break
 		}
 	}
-	s.snap.Nodes = append(s.snap.Nodes, state)
+	if !found {
+		s.snap.Nodes = append(s.snap.Nodes, state)
+	}
 	if state.CollectedAt.After(s.snap.CollectedAt) {
 		s.snap.CollectedAt = state.CollectedAt
 	}
+	// Keep snapshot order aligned with config (workers finish out of order).
+	s.syncSnapshotNodesLocked(s.nodes)
 }
 
 func (s *Store) syncSnapshotNodesLocked(nodes []config.NodeConfig) {

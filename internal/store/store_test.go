@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/suapapa/mon64/internal/config"
+	"github.com/suapapa/mon64/internal/domain"
 	"github.com/suapapa/mon64/internal/store"
 )
 
@@ -54,6 +55,63 @@ func TestReload(t *testing.T) {
 	if stats.NodesConfigured != 1 {
 		t.Fatalf("nodes configured = %d", stats.NodesConfigured)
 	}
+}
+
+func TestSnapshotPreservesConfigOrder(t *testing.T) {
+	cfg := &config.Config{
+		Listen:         ":8080",
+		ScrapeInterval: time.Hour,
+		ScrapeTimeout:  time.Second,
+		Nodes: []config.NodeConfig{
+			{
+				Name:     "alpha",
+				PromFmt:  config.PromFmtNodeExporter,
+				Collects: []config.CollectKind{config.CollectCPU},
+			},
+			{
+				Name:     "bravo",
+				PromFmt:  config.PromFmtNvMonitor,
+				Collects: []config.CollectKind{config.CollectGPU},
+			},
+			{
+				Name:     "charlie",
+				PromFmt:  config.PromFmtNodeExporter,
+				Collects: []config.CollectKind{config.CollectMem},
+			},
+		},
+	}
+	st := store.NewDummy(cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go st.Start(ctx)
+
+	deadline := time.Now().Add(time.Second)
+	var snap domain.Snapshot
+	for time.Now().Before(deadline) {
+		snap = st.Snapshot()
+		if len(snap.Nodes) == 3 {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if len(snap.Nodes) != 3 {
+		t.Fatalf("nodes = %d, want 3", len(snap.Nodes))
+	}
+	want := []string{"alpha", "bravo", "charlie"}
+	for i, name := range want {
+		if snap.Nodes[i].Name != name {
+			t.Fatalf("nodes[%d] = %q, want %q (full=%v)",
+				i, snap.Nodes[i].Name, name, names(snap.Nodes))
+		}
+	}
+}
+
+func names(nodes []domain.NodeState) []string {
+	out := make([]string, len(nodes))
+	for i, n := range nodes {
+		out[i] = n.Name
+	}
+	return out
 }
 
 func TestDummyStoreUsesRequestedMetricsWithoutScraping(t *testing.T) {

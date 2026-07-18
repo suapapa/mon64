@@ -25,6 +25,7 @@ func (c *NvMonitorCollector) Collect(ctx context.Context, cfg config.NodeConfig,
 		Name:        cfg.Name,
 		CollectedAt: at,
 		Reachable:   true,
+		Collects:    cfg.CollectStrings(),
 	}
 	metrics, err := parseMetrics(body)
 	if err != nil {

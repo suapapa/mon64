@@ -150,3 +150,12 @@ func (n NodeConfig) Wants(kind CollectKind) bool {
 	}
 	return false
 }
+
+// CollectStrings returns collects as plain strings for NodeState.
+func (n NodeConfig) CollectStrings() []string {
+	out := make([]string, len(n.Collects))
+	for i, k := range n.Collects {
+		out[i] = string(k)
+	}
+	return out
+}

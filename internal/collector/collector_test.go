@@ -121,6 +121,12 @@ func TestVraptorFixture(t *testing.T) {
 	if state.MemUsed == nil {
 		t.Fatal("expected mem used")
 	}
+	if state.GPU != nil {
+		t.Fatal("gpu must be nil when not collected")
+	}
+	if !state.Wants("cpu") || state.Wants("gpu") {
+		t.Fatalf("collects = %v", state.Collects)
+	}
 }
 
 func TestMalformedMetrics(t *testing.T) {

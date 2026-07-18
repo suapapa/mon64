@@ -14,11 +14,23 @@ type NodeState struct {
 	CollectedAt time.Time `json:"collected_at" yaml:"collected_at"`
 	Reachable   bool      `json:"reachable" yaml:"reachable"`
 	LastError   string    `json:"last_error,omitempty" yaml:"last_error,omitempty"`
+	Collects    []string  `json:"collects" yaml:"collects"`
 	CPU         *float64  `json:"cpu,omitempty" yaml:"cpu,omitempty"`
 	GPU         *float64  `json:"gpu,omitempty" yaml:"gpu,omitempty"`
 	MemUsed     *float64  `json:"mem_used,omitempty" yaml:"mem_used,omitempty"`
 	MemCached   *float64  `json:"mem_cached,omitempty" yaml:"mem_cached,omitempty"`
 	SwapUsed    *float64  `json:"swap_used,omitempty" yaml:"swap_used,omitempty"`
+}
+
+// Wants reports whether this node was configured to collect kind
+// (e.g. "cpu", "gpu", "mem", "swap").
+func (n NodeState) Wants(kind string) bool {
+	for _, k := range n.Collects {
+		if k == kind {
+			return true
+		}
+	}
+	return false
 }
 
 // ClampPercent restricts v to [0, 100].

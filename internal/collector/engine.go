@@ -67,6 +67,7 @@ func (e *Engine) collectOne(ctx context.Context, node config.NodeConfig) domain.
 			CollectedAt: at,
 			Reachable:   false,
 			LastError:   err.Error(),
+			Collects:    node.CollectStrings(),
 		}
 	}
 	defer body.Close()
@@ -78,6 +79,7 @@ func (e *Engine) collectOne(ctx context.Context, node config.NodeConfig) domain.
 			CollectedAt: at,
 			Reachable:   false,
 			LastError:   err.Error(),
+			Collects:    node.CollectStrings(),
 		}
 	}
 	return col.Collect(ctx, node, body, at)
@@ -103,6 +105,7 @@ func (e *Engine) CollectFromReader(node config.NodeConfig, body io.Reader, at ti
 			CollectedAt: at,
 			Reachable:   false,
 			LastError:   err.Error(),
+			Collects:    node.CollectStrings(),
 		}
 	}
 	return col.Collect(context.Background(), node, body, at)

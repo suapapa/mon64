@@ -38,6 +38,7 @@ func (c *NodeExporterCollector) Collect(ctx context.Context, cfg config.NodeConf
 		Name:        cfg.Name,
 		CollectedAt: at,
 		Reachable:   true,
+		Collects:    cfg.CollectStrings(),
 	}
 	metrics, err := parseMetrics(body)
 	if err != nil {
