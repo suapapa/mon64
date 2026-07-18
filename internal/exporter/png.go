@@ -12,9 +12,13 @@ import (
 	"github.com/suapapa/mon64/internal/domain"
 )
 
+const badgeWidth = 64
+
 const (
-	badgeWidth  = 64
-	badgeHeight = 64
+	badgeNameGap    = 2
+	badgeMeterGap   = 2
+	badgeUnreachGap = 1
+	badgeBottomPad  = 2
 )
 
 var (
@@ -31,10 +35,11 @@ var (
 	loadRed    = color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff}
 )
 
-// BadgePNG renders a 64×64 status badge for one node.
-// Font: Tom Thumb (ref/tom-thumb.bdf) at 1×; web UI displays at 2×.
+// BadgePNG renders a 64×H status badge for one node.
+// Font: Tom Thumb (ref/tom-thumb.bdf) at 1×; web UI displays at 2× (128×2H).
 func BadgePNG(node domain.NodeState) ([]byte, error) {
-	img := image.NewRGBA(image.Rect(0, 0, badgeWidth, badgeHeight))
+	h := badgeHeight(node)
+	img := image.NewRGBA(image.Rect(0, 0, badgeWidth, h))
 	draw.Draw(img, img.Bounds(), &image.Uniform{C: bgColor}, image.Point{}, draw.Src)
 
 	lh := badgeFont.lineHeight(badgeFontScale)
@@ -42,10 +47,10 @@ func BadgePNG(node domain.NodeState) ([]byte, error) {
 	nameX := (badgeWidth - badgeFont.measure(name, badgeFontScale)) / 2
 	drawText(img, nameX, lh-badgeFont.descent*badgeFontScale, name, textColor)
 
-	y := lh + 2
+	y := lh + badgeNameGap
 	if !node.Reachable {
 		drawText(img, 4, y+badgeFont.ascent*badgeFontScale, "UNREACHABLE", errorColor)
-		y += lh + 1
+		y += lh + badgeUnreachGap
 		drawText(img, 4, y+badgeFont.ascent*badgeFontScale, truncateToWidth(node.LastError, badgeWidth-8), mutedColor)
 	} else {
 		if node.Wants("cpu") {
@@ -69,12 +74,35 @@ func BadgePNG(node domain.NodeState) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func badgeHeight(node domain.NodeState) int {
+	lh := badgeFont.lineHeight(badgeFontScale)
+	h := lh + badgeNameGap
+	if !node.Reachable {
+		return h + lh + badgeUnreachGap + lh + badgeBottomPad
+	}
+	n := meterCount(node)
+	if n == 0 {
+		return h + badgeBottomPad
+	}
+	return h + n*(lh+badgeMeterGap)
+}
+
+func meterCount(node domain.NodeState) int {
+	n := 0
+	for _, kind := range []string{"cpu", "gpu", "mem", "swap"} {
+		if node.Wants(kind) {
+			n++
+		}
+	}
+	return n
+}
+
 func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
 	lh := badgeFont.lineHeight(badgeFontScale)
 	baseline := y + badgeFont.ascent*badgeFontScale
 	drawText(img, x, baseline, label, mutedColor)
 
-	const gap = 4
+	const gap = 1
 	right := badgeWidth - 4
 	barX := x + badgeFont.measure(label, badgeFontScale) + gap
 	barW := right - barX
@@ -99,7 +127,7 @@ func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
 	}
 	valueW := badgeFont.measure(valueStr, badgeFontScale)
 	drawText(img, right-valueW, baseline, valueStr, valueColor)
-	return y + lh + 2
+	return y + lh + badgeMeterGap
 }
 
 func levelColor(pct float64) color.RGBA {
@@ -169,7 +197,7 @@ func truncateToWidth(s string, maxPx int) string {
 	return ellipsis
 }
 
-// BadgeDimensions returns fixed badge size for tests.
-func BadgeDimensions() (int, int) {
-	return badgeWidth, badgeHeight
+// BadgeSize returns the PNG pixel size for a node badge.
+func BadgeSize(node domain.NodeState) (w, h int) {
+	return badgeWidth, badgeHeight(node)
 }

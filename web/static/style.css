@@ -59,9 +59,9 @@ h1 {
 
 .badge img {
   display: block;
-  /* 64×64 PNG shown at 2× */
+  /* 64×H PNG shown at 2× */
   width: 128px;
-  height: 128px;
+  height: auto;
   image-rendering: pixelated;
 }
 

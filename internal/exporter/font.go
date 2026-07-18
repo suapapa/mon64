@@ -10,7 +10,7 @@ import (
 //go:embed tom-thumb.bdf
 var tomThumbBDF []byte
 
-// badgeFontScale draws 4×6 Tom Thumb glyphs 1:1 on the 64×64 badge
+// badgeFontScale draws 4×6 Tom Thumb glyphs 1:1 on the 64×H badge
 // (web UI enlarges the PNG 2× for display).
 const badgeFontScale = 1
 

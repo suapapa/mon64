@@ -16,7 +16,7 @@
       {{ range .Nodes }}
       <li class="node-row {{ if not .Reachable }}unreachable{{ end }}">
         <a class="badge" href="/api/v1/badge/{{ .Name }}.png" title="{{ .Name }} badge">
-          <img src="/api/v1/badge/{{ .Name }}.png" alt="{{ .Name }} badge" width="128" height="128">
+          <img src="/api/v1/badge/{{ .Name }}.png" alt="{{ .Name }} badge" width="128">
         </a>
         {{ if not .Reachable }}
         <p class="metrics error">{{ .LastError }}</p>

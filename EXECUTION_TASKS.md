@@ -104,11 +104,11 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 ---
 
-## T011 — PNG badge renderer
+## T011 — PNG node badge renderer
 
 **Status:** done
 
-- [x] 128×128 PNG, dark theme, meters
+- [x] 64×N PNG, dark theme, meters
 - [x] Unreachable / n/a display
 - [x] Document Tom Thumb BDF badge font (`ref/tom-thumb.bdf`)
 - [x] Decode/size tests

@@ -37,16 +37,16 @@ func TestJSONAndYAML(t *testing.T) {
 	}
 }
 
-func TestBadgePNG64(t *testing.T) {
+func TestBadgePNGSize(t *testing.T) {
 	cpu, gpu := 10.0, 50.0
-	node := domain.NodeState{
+	two := domain.NodeState{
 		Name:      "spark",
 		Reachable: true,
 		Collects:  []string{"cpu", "gpu"},
 		CPU:       &cpu,
 		GPU:       &gpu,
 	}
-	data, err := exporter.BadgePNG(node)
+	data, err := exporter.BadgePNG(two)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,10 +54,26 @@ func TestBadgePNG64(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w, h := exporter.BadgeDimensions()
+	w, h := exporter.BadgeSize(two)
 	b := img.Bounds()
 	if b.Dx() != w || b.Dy() != h {
 		t.Fatalf("size = %dx%d, want %dx%d", b.Dx(), b.Dy(), w, h)
+	}
+	if w != 64 {
+		t.Fatalf("width = %d, want 64", w)
+	}
+
+	four := two
+	four.Collects = []string{"cpu", "gpu", "mem", "swap"}
+	_, h4 := exporter.BadgeSize(four)
+	if h4 <= h {
+		t.Fatalf("more meters should grow height: 2=%d 4=%d", h, h4)
+	}
+
+	down := domain.NodeState{Name: "down", Reachable: false, LastError: "timeout"}
+	_, hd := exporter.BadgeSize(down)
+	if hd <= 0 {
+		t.Fatal("unreachable height must be positive")
 	}
 }
 

@@ -52,7 +52,7 @@
     return (
       '<li class="' + cls + '">' +
       '<a class="badge" href="' + badgeURL + '" title="' + escapeHTML(node.name) + ' badge">' +
-      '<img src="' + badgeURL + '" alt="' + escapeHTML(node.name) + ' badge" width="128" height="128">' +
+      '<img src="' + badgeURL + '" alt="' + escapeHTML(node.name) + ' badge" width="128">' +
       '</a>' +
       '<p class="' + metricsCls + '">' + metricsHTML(node) + '</p>' +
       '</li>'
