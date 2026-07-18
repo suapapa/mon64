@@ -14,9 +14,9 @@
   <main>
     <ul class="node-list">
       {{ range .Nodes }}
-      <li class="node-row {{ if not .Reachable }}unreachable{{ end }}">
-        <a class="badge" href="/api/v1/badge/{{ .Name }}.png" title="{{ .Name }} badge">
-          <img src="/api/v1/badge/{{ .Name }}.png" alt="{{ .Name }} badge" width="128">
+      <li class="node-row {{ if not .Reachable }}unreachable{{ end }}" data-name="{{ .Name }}">
+        <a class="badge" href="/api/v1/badge/{{ .Name }}.png?t={{ .CollectedAt.UnixMilli }}" title="{{ .Name }} badge">
+          <img src="/api/v1/badge/{{ .Name }}.png?t={{ .CollectedAt.UnixMilli }}" alt="{{ .Name }} badge" width="128">
         </a>
         {{ if not .Reachable }}
         <p class="metrics error">{{ .LastError }}</p>

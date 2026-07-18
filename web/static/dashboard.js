@@ -45,18 +45,9 @@
     return parts.join('');
   }
 
-  function renderRow(node, cacheBust) {
-    const cls = node.reachable ? 'node-row' : 'node-row unreachable';
-    const badgeURL = '/api/v1/badge/' + encodeURIComponent(node.name) + '.png?t=' + cacheBust;
-    const metricsCls = node.reachable ? 'metrics' : 'metrics error';
-    return (
-      '<li class="' + cls + '">' +
-      '<a class="badge" href="' + badgeURL + '" title="' + escapeHTML(node.name) + ' badge">' +
-      '<img src="' + badgeURL + '" alt="' + escapeHTML(node.name) + ' badge" width="128">' +
-      '</a>' +
-      '<p class="' + metricsCls + '">' + metricsHTML(node) + '</p>' +
-      '</li>'
-    );
+  function badgeURL(node) {
+    const t = Date.parse(node.collected_at) || 0;
+    return '/api/v1/badge/' + encodeURIComponent(node.name) + '.png?t=' + t;
   }
 
   function escapeHTML(s) {
@@ -67,6 +58,67 @@
       .replace(/"/g, '&quot;');
   }
 
+  function renderRow(node) {
+    const cls = node.reachable ? 'node-row' : 'node-row unreachable';
+    const url = badgeURL(node);
+    const metricsCls = node.reachable ? 'metrics' : 'metrics error';
+    return (
+      '<li class="' + cls + '" data-name="' + escapeHTML(node.name) + '">' +
+      '<a class="badge" href="' + url + '" title="' + escapeHTML(node.name) + ' badge">' +
+      '<img src="' + url + '" alt="' + escapeHTML(node.name) + ' badge" width="128">' +
+      '</a>' +
+      '<p class="' + metricsCls + '">' + metricsHTML(node) + '</p>' +
+      '</li>'
+    );
+  }
+
+  function setBadgeSrc(img, url) {
+    if (img.getAttribute('src') === url) {
+      return;
+    }
+    const pre = new Image();
+    pre.onload = function () {
+      img.src = url;
+    };
+    pre.onerror = function () {
+      img.src = url;
+    };
+    pre.src = url;
+  }
+
+  function updateRow(li, node) {
+    const url = badgeURL(node);
+    li.className = node.reachable ? 'node-row' : 'node-row unreachable';
+    const anchor = li.querySelector('a.badge');
+    const img = li.querySelector('img');
+    const metrics = li.querySelector('.metrics');
+    if (anchor) {
+      anchor.href = url;
+      anchor.title = node.name + ' badge';
+    }
+    if (img) {
+      setBadgeSrc(img, url);
+      img.alt = node.name + ' badge';
+    }
+    if (metrics) {
+      metrics.className = node.reachable ? 'metrics' : 'metrics error';
+      metrics.innerHTML = metricsHTML(node);
+    }
+  }
+
+  function sameNodeOrder(nodes) {
+    const rows = listEl.querySelectorAll('.node-row');
+    if (rows.length !== nodes.length) {
+      return false;
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      if (rows[i].getAttribute('data-name') !== nodes[i].name) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   async function refresh() {
     try {
       const res = await fetch('/api/v1/nodes');
@@ -75,10 +127,15 @@
       }
       const data = await res.json();
       metaEl.textContent = 'Updated ' + fmtTime(data.collected_at);
-      const cacheBust = Date.now();
-      listEl.innerHTML = (data.nodes || []).map(function (n) {
-        return renderRow(n, cacheBust);
-      }).join('');
+      const nodes = data.nodes || [];
+      if (!sameNodeOrder(nodes)) {
+        listEl.innerHTML = nodes.map(renderRow).join('');
+        return;
+      }
+      const rows = listEl.querySelectorAll('.node-row');
+      for (let i = 0; i < nodes.length; i++) {
+        updateRow(rows[i], nodes[i]);
+      }
     } catch (_) {
       // ignore transient network errors
     }
