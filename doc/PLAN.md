@@ -1,4 +1,4 @@
-현재 작업 디렉터리의 `mon128` 프로젝트를 MVP 수준으로 스캐폴딩하고 구현해 줘.
+현재 작업 디렉터리의 `mon64` 프로젝트를 MVP 수준으로 스캐폴딩하고 구현해 줘.
 
 먼저 다음 파일을 읽고 실제 요구사항과 Prometheus 메트릭 이름을 확인해:
 - `doc/PLAN.md`
@@ -6,7 +6,7 @@
 - `ref/spark_nv-monitor.metrics`
 - `ref/omv_node-exporter_metrics.metrics`
 - `ref/vraptor_node-exporter_metrics.metrics`
-- `ref/cherry-10-r.bdf`
+- `ref/tom-thumb.bdf` (Tom Thumb; see also `ref/cherry-10-r.bdf`)
 
 프로젝트 목적:
 여러 원격 서버가 노출하는 Prometheus endpoint를 주기적으로 수집하고, 정규화된 서버 상태를 Web UI, JSON/YAML API, 128×128 PNG 이미지로 제공한다.
@@ -37,7 +37,7 @@
 - Web frontend
 
 권장 디렉터리 구조:
-- `cmd/mon128/`
+- `cmd/mon64/`
 - `internal/config/`
 - `internal/domain/`
 - `internal/collector/`
@@ -140,9 +140,9 @@ HTTP endpoint:
 - CPU/GPU/MEM/SWAP 값을 작은 horizontal bar나 meter로 표현
 - 정상/경고/위험 상태를 구분하는 일관된 색상 테마
 - unavailable 값과 unreachable 상태를 분명히 표시
-- `ref/cherry-10-r.bdf` 사용이 간단하지 않으면 MVP에서는 Go 기본 bitmap font를 사용하고 향후 교체 지점을 문서화
+- 배지 글꼴은 Tom Thumb BDF (`ref/tom-thumb.bdf`)를 파싱·임베드해 사용 (128×128에서는 2× 스케일)
 - PLAN에 언급된 참고 이미지는 현재 실제 파일이 없을 수 있으므로 존재한다고 가정하지 말 것
-- 참고 이미지: `ref/mon128_idea.png`
+- 참고 이미지: `ref/mon64_idea.png`
 
 테스트:
 - 제공된 세 metrics fixture를 직접 사용하는 collector 테스트

@@ -1,0 +1,28 @@
+listen: ":8080"
+scrape_interval: 15s   # default per-node interval; override with nodes[].scrape_interval
+scrape_timeout: 5s
+
+nodes:
+  - name: spark
+    prom_fmt: nv-monitor
+    prom_endpoint: http://spark.local:9101/metrics
+    # prom_api_key: ""  # optional; when set, sends Authorization: Bearer {key}
+    collects:
+      - cpu
+      - gpu
+      - mem
+      - swap
+
+  - name: vraptor
+    prom_fmt: node-exporter
+    prom_endpoint: http://vraptor.local:9100/metrics
+    collects:
+      - cpu
+      - mem
+
+  - name: omv
+    prom_fmt: node-exporter
+    prom_endpoint: http://omv.local:9100/metrics
+    collects:
+      - cpu
+      - mem

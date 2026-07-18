@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mon64</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>mon64</h1>
+    <p class="meta">Updated {{ .CollectedAt.Format "2006-01-02 15:04:05 UTC" }}</p>
+  </header>
+  <main class="grid">
+    {{ range .Nodes }}
+    <article class="card {{ if not .Reachable }}unreachable{{ end }}">
+      <div class="card-head">
+        <h2>{{ .Name }}</h2>
+        <a href="/api/v1/badge/{{ .Name }}.png" title="badge"><img src="/api/v1/badge/{{ .Name }}.png" alt="{{ .Name }} badge" width="128" height="128"></a>
+      </div>
+      {{ if not .Reachable }}
+      <p class="error">{{ .LastError }}</p>
+      {{ else }}
+      <dl>
+        {{ if .CPU }}<div><dt>CPU</dt><dd>{{ printf "%.1f" (deref .CPU) }}%</dd></div>{{ else }}<div><dt>CPU</dt><dd class="na">n/a</dd></div>{{ end }}
+        {{ if .GPU }}<div><dt>GPU</dt><dd>{{ printf "%.1f" (deref .GPU) }}%</dd></div>{{ else }}<div><dt>GPU</dt><dd class="na">n/a</dd></div>{{ end }}
+        {{ if .MemUsed }}<div><dt>MEM</dt><dd>{{ printf "%.1f" (deref .MemUsed) }}%</dd></div>{{ else }}<div><dt>MEM</dt><dd class="na">n/a</dd></div>{{ end }}
+        {{ if .MemCached }}<div><dt>CACHE</dt><dd>{{ printf "%.1f" (deref .MemCached) }}%</dd></div>{{ end }}
+        {{ if .SwapUsed }}<div><dt>SWAP</dt><dd>{{ printf "%.1f" (deref .SwapUsed) }}%</dd></div>{{ else }}<div><dt>SWAP</dt><dd class="na">n/a</dd></div>{{ end }}
+      </dl>
+      {{ end }}
+    </article>
+    {{ end }}
+  </main>
+  <footer>
+    <a href="/api/v1/nodes">JSON</a> · <a href="/api/v1/nodes.yaml">YAML</a> · <a href="/healthz">healthz</a>
+  </footer>
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

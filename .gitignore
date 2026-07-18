@@ -1,0 +1,13 @@
+/bin/
+*.exe
+*.test
+*.out
+.DS_Store
+.idea/
+.vscode/
+.agents/
+skills-lock.json
+ref/
+doc/
+cmd/mon64
+configs/homin*.yaml

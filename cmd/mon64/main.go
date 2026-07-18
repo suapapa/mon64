@@ -1,0 +1,105 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"sync/atomic"
+	"syscall"
+	"time"
+
+	"github.com/suapapa/mon64/internal/config"
+	"github.com/suapapa/mon64/internal/metrics"
+	"github.com/suapapa/mon64/internal/server"
+	"github.com/suapapa/mon64/internal/store"
+)
+
+func main() {
+	configPath := flag.String("config", "configs/example.yaml", "path to YAML config")
+	flag.Parse()
+
+	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	slog.SetDefault(log)
+
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		log.Error("config load failed", "err", err)
+		os.Exit(1)
+	}
+
+	reg := metrics.NewRegistry()
+	st := store.New(cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go st.Start(ctx)
+
+	var listen atomic.Value
+	listen.Store(cfg.Listen)
+
+	reload := func() error {
+		newCfg, err := config.Load(*configPath)
+		if err != nil {
+			return err
+		}
+		if newCfg.Listen != listen.Load().(string) {
+			log.Warn("listen address change ignored; restart required",
+				"current", listen.Load(), "new", newCfg.Listen)
+		}
+		if err := st.Reload(newCfg); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	go func() {
+		if err := config.Watch(ctx, *configPath, reload, log); err != nil && ctx.Err() == nil {
+			log.Error("config watcher stopped", "err", err)
+		}
+	}()
+
+	sighup := make(chan os.Signal, 1)
+	signal.Notify(sighup, syscall.SIGHUP)
+	go func() {
+		for range sighup {
+			if err := reload(); err != nil {
+				log.Error("SIGHUP reload failed", "err", err)
+			} else {
+				log.Info("config reloaded", "reason", "SIGHUP")
+			}
+		}
+	}()
+
+	srv, err := server.New(st, log, reg)
+	if err != nil {
+		log.Error("server init failed", "err", err)
+		os.Exit(1)
+	}
+
+	httpServer := &http.Server{
+		Addr:    cfg.Listen,
+		Handler: srv.Engine(),
+	}
+
+	go func() {
+		log.Info("listening", "addr", cfg.Listen)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("listen failed", "err", err)
+			os.Exit(1)
+		}
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
+	log.Info("shutting down")
+	cancel()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Error("shutdown failed", "err", err)
+	}
+}
