@@ -2,6 +2,7 @@ package exporter_test
 
 import (
 	"bytes"
+	"image/color"
 	"image/png"
 	"testing"
 	"time"
@@ -108,5 +109,55 @@ func TestBadgeUnreachable(t *testing.T) {
 	}
 	if len(data) == 0 {
 		t.Fatal("empty png")
+	}
+}
+
+func TestBadgeStackPNG(t *testing.T) {
+	cpu := 10.0
+	nodes := []domain.NodeState{
+		{
+			Name:      "spark",
+			Reachable: true,
+			Collects:  []string{"cpu"},
+			CPU:       &cpu,
+		},
+		{
+			Name:      "down",
+			Reachable: false,
+			LastError: "timeout",
+		},
+	}
+	data, err := exporter.BadgeStackPNG(nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w, h := exporter.BadgeStackSize(nodes)
+	if img.Bounds().Dx() != w || img.Bounds().Dy() != h {
+		t.Fatalf("size = %dx%d, want %dx%d", img.Bounds().Dx(), img.Bounds().Dy(), w, h)
+	}
+
+	_, firstHeight := exporter.BadgeSize(nodes[0])
+	for x := 0; x < w; x++ {
+		if got := color.RGBAModel.Convert(img.At(x, firstHeight)).(color.RGBA); got != (color.RGBA{A: 0xff}) {
+			t.Fatalf("separator pixel (%d,%d) = %v, want black", x, firstHeight, got)
+		}
+	}
+}
+
+func TestBadgeStackPNGEmpty(t *testing.T) {
+	data, err := exporter.BadgeStackPNG([]domain.NodeState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := img.Bounds().Size(); got.X != 64 || got.Y != 1 {
+		t.Fatalf("empty size = %dx%d, want 64x1", got.X, got.Y)
 	}
 }

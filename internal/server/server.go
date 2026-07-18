@@ -59,6 +59,7 @@ func New(st *store.Store, log *slog.Logger, reg *metrics.Registry) (*Server, err
 	r.GET("/api/v1/nodes", s.handleNodesJSON)
 	r.GET("/api/v1/nodes.yaml", s.handleNodesYAML)
 	r.GET("/api/v1/events", s.handleEvents)
+	r.GET("/api/v1/badge", s.handleBadgeStack)
 	r.GET("/api/v1/badge/:name", s.handleBadge)
 	r.GET("/", s.handleIndex)
 	r.StaticFS("/static", http.FS(static))
@@ -113,6 +114,15 @@ func (s *Server) handleBadge(c *gin.Context) {
 		return
 	}
 	data, err := exporter.BadgePNG(node)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.Data(http.StatusOK, "image/png", data)
+}
+
+func (s *Server) handleBadgeStack(c *gin.Context) {
+	data, err := exporter.BadgeStackPNG(s.store.Snapshot().Nodes)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return

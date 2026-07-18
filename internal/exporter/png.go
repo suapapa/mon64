@@ -15,10 +15,12 @@ import (
 const badgeWidth = 64
 
 const (
-	badgeNameGap    = 2
-	badgeMeterGap   = 2
-	badgeUnreachGap = 1
-	badgeBottomPad  = 2
+	badgeSidePad    = 1
+	badgeNameGap    = 0
+	badgeMeterGap   = 1
+	badgeUnreachGap = 0
+	badgeBottomPad  = 0
+	badgeStackGap   = 2
 )
 
 var (
@@ -38,35 +40,64 @@ var (
 // BadgePNG renders a 64×H status badge for one node.
 // Font: Tom Thumb (ref/tom-thumb.bdf) at 1×; web UI displays at 2× (128×2H).
 func BadgePNG(node domain.NodeState) ([]byte, error) {
+	return encodePNG(badgeImage(node))
+}
+
+// BadgeStackPNG renders all node badges vertically with black separators.
+func BadgeStackPNG(nodes []domain.NodeState) ([]byte, error) {
+	height := badgeStackHeight(nodes)
+	if height == 0 {
+		height = 1
+	}
+	stack := image.NewRGBA(image.Rect(0, 0, badgeWidth, height))
+	draw.Draw(stack, stack.Bounds(), image.Black, image.Point{}, draw.Src)
+
+	y := 0
+	for _, node := range nodes {
+		badge := badgeImage(node)
+		target := image.Rect(0, y, badgeWidth, y+badge.Bounds().Dy())
+		draw.Draw(stack, target, badge, image.Point{}, draw.Src)
+		y = target.Max.Y + badgeStackGap
+	}
+
+	return encodePNG(stack)
+}
+
+func badgeImage(node domain.NodeState) *image.RGBA {
 	h := badgeHeight(node)
 	img := image.NewRGBA(image.Rect(0, 0, badgeWidth, h))
 	draw.Draw(img, img.Bounds(), &image.Uniform{C: bgColor}, image.Point{}, draw.Src)
 
 	lh := badgeFont.lineHeight(badgeFontScale)
-	name := truncateToWidth(node.Name, badgeWidth-8)
+	contentW := badgeWidth - 2*badgeSidePad
+	name := truncateToWidth(node.Name, contentW)
 	nameX := (badgeWidth - badgeFont.measure(name, badgeFontScale)) / 2
 	drawText(img, nameX, lh-badgeFont.descent*badgeFontScale, name, textColor)
 
 	y := lh + badgeNameGap
 	if !node.Reachable {
-		drawText(img, 4, y+badgeFont.ascent*badgeFontScale, "UNREACHABLE", errorColor)
+		drawText(img, badgeSidePad, y+badgeFont.ascent*badgeFontScale, "UNREACHABLE", errorColor)
 		y += lh + badgeUnreachGap
-		drawText(img, 4, y+badgeFont.ascent*badgeFontScale, truncateToWidth(node.LastError, badgeWidth-8), mutedColor)
+		drawText(img, badgeSidePad, y+badgeFont.ascent*badgeFontScale, truncateToWidth(node.LastError, contentW), mutedColor)
 	} else {
 		if node.Wants("cpu") {
-			y = drawMeter(img, 4, y, "CPU", node.CPU)
+			y = drawMeter(img, badgeSidePad, y, "CPU", node.CPU)
 		}
 		if node.Wants("gpu") {
-			y = drawMeter(img, 4, y, "GPU", node.GPU)
+			y = drawMeter(img, badgeSidePad, y, "GPU", node.GPU)
 		}
 		if node.Wants("mem") {
-			y = drawMeter(img, 4, y, "MEM", node.MemUsed)
+			y = drawMeter(img, badgeSidePad, y, "MEM", node.MemUsed)
 		}
 		if node.Wants("swap") {
-			y = drawMeter(img, 4, y, "SWP", node.SwapUsed)
+			y = drawMeter(img, badgeSidePad, y, "SWP", node.SwapUsed)
 		}
 	}
 
+	return img
+}
+
+func encodePNG(img image.Image) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
 		return nil, fmt.Errorf("png encode: %w", err)
@@ -97,24 +128,35 @@ func meterCount(node domain.NodeState) int {
 	return n
 }
 
+func badgeStackHeight(nodes []domain.NodeState) int {
+	if len(nodes) == 0 {
+		return 0
+	}
+	height := badgeStackGap // * (len(nodes) - 1)
+	for _, node := range nodes {
+		height += badgeHeight(node)
+	}
+	return height
+}
+
 func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
 	lh := badgeFont.lineHeight(badgeFontScale)
 	baseline := y + badgeFont.ascent*badgeFontScale
 	drawText(img, x, baseline, label, mutedColor)
 
 	const gap = 1
-	right := badgeWidth - 4
+	right := badgeWidth - badgeSidePad
 	barX := x + badgeFont.measure(label, badgeFontScale) + gap
 	barW := right - barX
 	if barW > 0 {
-		drawRect(img, barX, y, barW, lh, barBG)
+		drawRect(img, barX, y, barW, lh-1, barBG)
 		if val != nil {
 			fill := int(math.Round(float64(barW) * (*val / 100)))
 			if fill > barW {
 				fill = barW
 			}
 			if fill > 0 {
-				drawRect(img, barX, y, fill, lh, levelColor(*val))
+				drawRect(img, barX, y, fill, lh-1, levelColor(*val))
 			}
 		}
 	}
@@ -127,7 +169,7 @@ func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
 	}
 	valueW := badgeFont.measure(valueStr, badgeFontScale)
 	drawText(img, right-valueW, baseline, valueStr, valueColor)
-	return y + lh + badgeMeterGap
+	return y + lh - 1 + badgeMeterGap
 }
 
 func levelColor(pct float64) color.RGBA {
@@ -200,4 +242,13 @@ func truncateToWidth(s string, maxPx int) string {
 // BadgeSize returns the PNG pixel size for a node badge.
 func BadgeSize(node domain.NodeState) (w, h int) {
 	return badgeWidth, badgeHeight(node)
+}
+
+// BadgeStackSize returns the PNG pixel size for a stacked badge.
+func BadgeStackSize(nodes []domain.NodeState) (w, h int) {
+	height := badgeStackHeight(nodes)
+	if height == 0 {
+		height = 1
+	}
+	return badgeWidth, height
 }

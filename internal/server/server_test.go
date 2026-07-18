@@ -1,7 +1,9 @@
 package server_test
 
 import (
+	"bytes"
 	"context"
+	"image/png"
 	"io"
 	"log/slog"
 	"net/http"
@@ -108,6 +110,25 @@ func TestHandlers(t *testing.T) {
 		}
 		if ct := rec.Header().Get("Content-Type"); ct != "image/png" {
 			t.Fatalf("content-type = %q", ct)
+		}
+	})
+
+	t.Run("stacked badge", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/badge", nil)
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status %d", rec.Code)
+		}
+		if ct := rec.Header().Get("Content-Type"); ct != "image/png" {
+			t.Fatalf("content-type = %q", ct)
+		}
+		img, err := png.Decode(bytes.NewReader(rec.Body.Bytes()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if img.Bounds().Dx() != 64 {
+			t.Fatalf("width = %d, want 64", img.Bounds().Dx())
 		}
 	})
 

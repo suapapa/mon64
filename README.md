@@ -1,6 +1,6 @@
 # mon64
 
-Prometheus endpoint aggregator that normalizes remote server metrics into a web dashboard, JSON/YAML API, and 128×128 PNG badges.
+Prometheus endpoint aggregator that normalizes remote server metrics into a web dashboard, JSON/YAML API, and compact PNG badges.
 
 ## Build
 
@@ -43,7 +43,8 @@ See `configs/example.yaml`. Key fields:
 | `GET /` | Dashboard (all nodes) |
 | `GET /api/v1/nodes` | Canonical JSON snapshot |
 | `GET /api/v1/nodes.yaml` | YAML snapshot |
-| `GET /api/v1/badge/{node}.png` | 128×128 PNG badge |
+| `GET /api/v1/badge` | All 64px-wide node badges stacked with 1px separators |
+| `GET /api/v1/badge/{node}.png` | One 64px-wide node badge |
 | `GET /healthz` | Liveness probe |
 | `GET /metrics` | mon64 self-metrics (Prometheus text) |
 
@@ -69,7 +70,7 @@ Unset or uncollectable fields are omitted (null), never coerced to zero.
 
 ## Badge font
 
-Badges use **[Tom Thumb](https://robey.lag.net/2010/01/23/tiny-monospace-font.html)** (4×6 monospace by Robey Pointer), from `ref/tom-thumb.bdf`. The same file is embedded and drawn at 2× in `internal/exporter` for legibility on 128×128 PNGs.
+Badges use **[Tom Thumb](https://robey.lag.net/2010/01/23/tiny-monospace-font.html)** (4×6 monospace by Robey Pointer), from `ref/tom-thumb.bdf`. The same file is embedded in `internal/exporter`; the dashboard uses pixel-perfect CSS scaling for legibility.
 
 ## Docker
 

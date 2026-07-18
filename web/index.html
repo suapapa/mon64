@@ -12,6 +12,9 @@
     <p class="meta">Updated {{ .CollectedAt.Format "2006-01-02 15:04:05 UTC" }}</p>
   </header>
   <main>
+    <a class="badge-stack" href="/api/v1/badge?t={{ .CollectedAt.UnixMilli }}" title="All node badges">
+      <img src="/api/v1/badge?t={{ .CollectedAt.UnixMilli }}" alt="All node badges" width="256">
+    </a>
     <ul class="node-list">
       {{ range .Nodes }}
       <li class="node-row {{ if not .Reachable }}unreachable{{ end }}" data-name="{{ .Name }}">
@@ -41,7 +44,8 @@
     </ul>
   </main>
   <footer>
-    <a href="/api/v1/nodes">JSON</a> · <a href="/api/v1/nodes.yaml">YAML</a> · <a href="/healthz">healthz</a>
+    <p><a href="/api/v1/nodes">JSON</a> · <a href="/api/v1/nodes.yaml">YAML</a> · <a href="/healthz">healthz</a></p>
+    <p>© Homin Lee &lt;<a href="mailto:i@homin.dev">i@homin.dev</a>&gt;</p>
   </footer>
   <script src="/static/dashboard.js"></script>
 </body>

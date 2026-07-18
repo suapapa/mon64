@@ -1,6 +1,8 @@
 (function () {
   const metaEl = document.querySelector('.meta');
   const listEl = document.querySelector('.node-list');
+  const stackAnchorEl = document.querySelector('.badge-stack');
+  const stackImgEl = document.querySelector('.badge-stack img');
   if (!metaEl || !listEl) {
     return;
   }
@@ -48,6 +50,11 @@
   function badgeURL(node) {
     const t = Date.parse(node.collected_at) || 0;
     return '/api/v1/badge/' + encodeURIComponent(node.name) + '.png?t=' + t;
+  }
+
+  function stackBadgeURL(collectedAt) {
+    const t = Date.parse(collectedAt) || 0;
+    return '/api/v1/badge?t=' + t;
   }
 
   function escapeHTML(s) {
@@ -127,6 +134,13 @@
       }
       const data = await res.json();
       metaEl.textContent = 'Updated ' + fmtTime(data.collected_at);
+      const stackURL = stackBadgeURL(data.collected_at);
+      if (stackAnchorEl) {
+        stackAnchorEl.href = stackURL;
+      }
+      if (stackImgEl) {
+        setBadgeSrc(stackImgEl, stackURL);
+      }
       const nodes = data.nodes || [];
       if (!sameNodeOrder(nodes)) {
         listEl.innerHTML = nodes.map(renderRow).join('');

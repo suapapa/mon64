@@ -207,6 +207,16 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 ---
 
+## T021 — Stacked badge
+
+**Status:** done
+
+- [x] Add `GET /api/v1/badge` stacked PNG with 1px black separators
+- [x] Display the stacked badge at 4× above the dashboard list
+- [x] Add dashboard copyright footer
+
+---
+
 ## Dependency graph
 
 ```
