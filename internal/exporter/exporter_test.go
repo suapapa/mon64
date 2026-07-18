@@ -37,7 +37,7 @@ func TestJSONAndYAML(t *testing.T) {
 	}
 }
 
-func TestBadgePNG128(t *testing.T) {
+func TestBadgePNG64(t *testing.T) {
 	cpu, gpu := 10.0, 50.0
 	node := domain.NodeState{
 		Name:      "spark",

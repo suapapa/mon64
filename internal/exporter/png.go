@@ -13,23 +13,26 @@ import (
 )
 
 const (
-	badgeWidth  = 128
-	badgeHeight = 128
+	badgeWidth  = 64
+	badgeHeight = 64
 )
 
 var (
-	bgColor     = color.RGBA{R: 0x1a, G: 0x1a, B: 0x2e, A: 0xff}
-	textColor   = color.RGBA{R: 0xe0, G: 0xe0, B: 0xe0, A: 0xff}
-	mutedColor  = color.RGBA{R: 0x88, G: 0x88, B: 0x99, A: 0xff}
-	errorColor  = color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff}
-	okColor     = color.RGBA{R: 0x44, G: 0xcc, B: 0x88, A: 0xff}
-	warnColor   = color.RGBA{R: 0xff, G: 0xcc, B: 0x44, A: 0xff}
-	dangerColor = color.RGBA{R: 0xff, G: 0x55, B: 0x55, A: 0xff}
-	barBG       = color.RGBA{R: 0x33, G: 0x33, B: 0x44, A: 0xff}
+	bgColor    = color.RGBA{R: 0x1a, G: 0x1a, B: 0x2e, A: 0xff}
+	textColor  = color.RGBA{R: 0xe0, G: 0xe0, B: 0xe0, A: 0xff}
+	mutedColor = color.RGBA{R: 0x88, G: 0x88, B: 0x99, A: 0xff}
+	errorColor = color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff}
+	barBG      = color.RGBA{R: 0x33, G: 0x33, B: 0x44, A: 0xff}
+
+	// Load gradient stops: blue (0%) → green → orange → red (100%).
+	loadBlue   = color.RGBA{R: 0x33, G: 0x88, B: 0xff, A: 0xff}
+	loadGreen  = color.RGBA{R: 0x44, G: 0xcc, B: 0x66, A: 0xff}
+	loadOrange = color.RGBA{R: 0xff, G: 0xaa, B: 0x33, A: 0xff}
+	loadRed    = color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff}
 )
 
-// BadgePNG renders a 128×128 status badge for one node.
-// Font: Tom Thumb (ref/tom-thumb.bdf), drawn at 2× for legibility.
+// BadgePNG renders a 64×64 status badge for one node.
+// Font: Tom Thumb (ref/tom-thumb.bdf) at 1×; web UI displays at 2×.
 func BadgePNG(node domain.NodeState) ([]byte, error) {
 	img := image.NewRGBA(image.Rect(0, 0, badgeWidth, badgeHeight))
 	draw.Draw(img, img.Bounds(), &image.Uniform{C: bgColor}, image.Point{}, draw.Src)
@@ -39,10 +42,10 @@ func BadgePNG(node domain.NodeState) ([]byte, error) {
 	nameX := (badgeWidth - badgeFont.measure(name, badgeFontScale)) / 2
 	drawText(img, nameX, lh-badgeFont.descent*badgeFontScale, name, textColor)
 
-	y := lh + 4
+	y := lh + 2
 	if !node.Reachable {
 		drawText(img, 4, y+badgeFont.ascent*badgeFontScale, "UNREACHABLE", errorColor)
-		y += lh + 2
+		y += lh + 1
 		drawText(img, 4, y+badgeFont.ascent*badgeFontScale, truncateToWidth(node.LastError, badgeWidth-8), mutedColor)
 	} else {
 		if node.Wants("cpu") {
@@ -67,38 +70,71 @@ func BadgePNG(node domain.NodeState) ([]byte, error) {
 }
 
 func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
+	lh := badgeFont.lineHeight(badgeFontScale)
 	baseline := y + badgeFont.ascent*badgeFontScale
 	drawText(img, x, baseline, label, mutedColor)
-	barY := baseline + badgeFont.descent*badgeFontScale + 2
-	barW := badgeWidth - 8
-	barH := 6
-	drawRect(img, x, barY, barW, barH, barBG)
 
-	if val == nil {
-		na := "n/a"
-		drawText(img, x+barW-badgeFont.measure(na, badgeFontScale), baseline, na, mutedColor)
-		return barY + barH + 4
+	const gap = 4
+	right := badgeWidth - 4
+	barX := x + badgeFont.measure(label, badgeFontScale) + gap
+	barW := right - barX
+	if barW > 0 {
+		drawRect(img, barX, y, barW, lh, barBG)
+		if val != nil {
+			fill := int(math.Round(float64(barW) * (*val / 100)))
+			if fill > barW {
+				fill = barW
+			}
+			if fill > 0 {
+				drawRect(img, barX, y, fill, lh, levelColor(*val))
+			}
+		}
 	}
-	fill := int(math.Round(float64(barW) * (*val / 100)))
-	if fill > barW {
-		fill = barW
+
+	valueStr := "n/a"
+	valueColor := mutedColor
+	if val != nil {
+		valueStr = fmt.Sprintf("%.0f%%", *val)
+		valueColor = textColor
 	}
-	if fill > 0 {
-		drawRect(img, x, barY, fill, barH, levelColor(*val))
-	}
-	pct := fmt.Sprintf("%.0f%%", *val)
-	drawText(img, x+barW-badgeFont.measure(pct, badgeFontScale), baseline, pct, textColor)
-	return barY + barH + 4
+	valueW := badgeFont.measure(valueStr, badgeFontScale)
+	drawText(img, right-valueW, baseline, valueStr, valueColor)
+	return y + lh + 2
 }
 
 func levelColor(pct float64) color.RGBA {
-	switch {
-	case pct >= 90:
-		return dangerColor
-	case pct >= 75:
-		return warnColor
-	default:
-		return okColor
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 100 {
+		pct = 100
+	}
+	type stop struct {
+		t float64
+		c color.RGBA
+	}
+	stops := []stop{
+		{0, loadBlue},
+		{33, loadGreen},
+		{66, loadOrange},
+		{100, loadRed},
+	}
+	for i := 1; i < len(stops); i++ {
+		if pct <= stops[i].t {
+			span := stops[i].t - stops[i-1].t
+			f := (pct - stops[i-1].t) / span
+			return lerpRGBA(stops[i-1].c, stops[i].c, f)
+		}
+	}
+	return loadRed
+}
+
+func lerpRGBA(a, b color.RGBA, t float64) color.RGBA {
+	return color.RGBA{
+		R: uint8(math.Round(float64(a.R) + float64(b.R-a.R)*t)),
+		G: uint8(math.Round(float64(a.G) + float64(b.G-a.G)*t)),
+		B: uint8(math.Round(float64(a.B) + float64(b.B-a.B)*t)),
+		A: 0xff,
 	}
 }
 
