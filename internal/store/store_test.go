@@ -2,6 +2,9 @@ package store_test
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -50,5 +53,57 @@ func TestReload(t *testing.T) {
 	stats := st.ScrapeStats()
 	if stats.NodesConfigured != 1 {
 		t.Fatalf("nodes configured = %d", stats.NodesConfigured)
+	}
+}
+
+func TestDummyStoreUsesRequestedMetricsWithoutScraping(t *testing.T) {
+	var requests atomic.Int64
+	endpoint := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		requests.Add(1)
+	}))
+	defer endpoint.Close()
+
+	cfg := &config.Config{
+		Listen:         ":8080",
+		ScrapeInterval: time.Hour,
+		ScrapeTimeout:  time.Second,
+		Nodes: []config.NodeConfig{{
+			Name:         "demo",
+			PromEndpoint: endpoint.URL,
+			Collects: []config.CollectKind{
+				config.CollectCPU,
+				config.CollectMem,
+			},
+		}},
+	}
+	st := store.NewDummy(cfg)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go st.Start(ctx)
+
+	deadline := time.Now().Add(time.Second)
+	var nodeFound bool
+	for time.Now().Before(deadline) {
+		node, ok := st.NodeByName("demo")
+		if ok {
+			nodeFound = true
+			if !node.Reachable {
+				t.Fatal("dummy node is unreachable")
+			}
+			if node.CPU == nil || node.MemUsed == nil || node.MemCached == nil {
+				t.Fatalf("requested metrics missing: %#v", node)
+			}
+			if node.GPU != nil || node.SwapUsed != nil {
+				t.Fatalf("unrequested metrics populated: %#v", node)
+			}
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if !nodeFound {
+		t.Fatal("dummy node was not collected")
+	}
+	if got := requests.Load(); got != 0 {
+		t.Fatalf("Prometheus endpoint requests = %d, want 0", got)
 	}
 }

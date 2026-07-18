@@ -14,6 +14,15 @@ go build -o bin/mon64 ./cmd/mon64
 ./bin/mon64 -config configs/example.yaml
 ```
 
+Use dummy mode to preview the dashboard without Prometheus endpoints:
+
+```bash
+./bin/mon64 -config configs/example.yaml -dummy
+```
+
+In dummy mode, each node only needs `name` and `collects`; requested metrics
+receive fixed sample values and no remote requests are made.
+
 ## Configuration
 
 See `configs/example.yaml`. Key fields:

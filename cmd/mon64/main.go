@@ -19,12 +19,18 @@ import (
 
 func main() {
 	configPath := flag.String("config", "configs/example.yaml", "path to YAML config")
+	dummy := flag.Bool("dummy", false, "generate dummy metrics without connecting to Prometheus endpoints")
 	flag.Parse()
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
 
-	cfg, err := config.Load(*configPath)
+	loadConfig := config.Load
+	if *dummy {
+		loadConfig = config.LoadDummy
+	}
+
+	cfg, err := loadConfig(*configPath)
 	if err != nil {
 		log.Error("config load failed", "err", err)
 		os.Exit(1)
@@ -32,6 +38,10 @@ func main() {
 
 	reg := metrics.NewRegistry()
 	st := store.New(cfg)
+	if *dummy {
+		st = store.NewDummy(cfg)
+		log.Info("dummy mode enabled")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go st.Start(ctx)
@@ -40,7 +50,7 @@ func main() {
 	listen.Store(cfg.Listen)
 
 	reload := func() error {
-		newCfg, err := config.Load(*configPath)
+		newCfg, err := loadConfig(*configPath)
 		if err != nil {
 			return err
 		}

@@ -38,6 +38,32 @@ func TestLoadExampleConfig(t *testing.T) {
 	}
 }
 
+func TestLoadDummyOnlyRequiresNodeNameAndCollects(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "dummy.yaml")
+	data := []byte(`
+listen: ":8080"
+scrape_interval: 15s
+scrape_timeout: 5s
+nodes:
+  - name: demo
+    collects: [cpu, gpu, mem, swap]
+`)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := config.LoadDummy(path)
+	if err != nil {
+		t.Fatalf("LoadDummy: %v", err)
+	}
+	if len(cfg.Nodes) != 1 || cfg.Nodes[0].Name != "demo" {
+		t.Fatalf("nodes = %#v", cfg.Nodes)
+	}
+	if _, err := config.Load(path); err == nil {
+		t.Fatal("regular Load accepted missing Prometheus settings")
+	}
+}
+
 func TestValidateErrors(t *testing.T) {
 	tests := []struct {
 		name string

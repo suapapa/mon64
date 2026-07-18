@@ -196,9 +196,20 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 ---
 
+## T020 — Dummy metrics mode
+
+**Status:** done
+
+- [x] Add `-dummy` CLI flag
+- [x] Require only node `name` and `collects` in dummy mode
+- [x] Generate requested metrics without Prometheus endpoint requests
+- [x] Add config and store tests
+
+---
+
 ## Dependency graph
 
 ```
 T001 → T002,T003 → T004,T005 → T006,T007 → T008 → T009 → T010,T011 → T012,T013 → T014 → T015 → T016
-T017–T019 independent optional follow-ups
+T017–T020 independent optional follow-ups
 ```

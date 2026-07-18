@@ -22,6 +22,7 @@ type Store struct {
 	engine   *collector.Engine
 	nodes    []config.NodeConfig
 	interval time.Duration
+	dummy    bool
 	reloadCh chan struct{}
 
 	workerCancel context.CancelFunc
@@ -38,10 +39,20 @@ type Store struct {
 
 // New creates a store bound to configuration.
 func New(cfg *config.Config) *Store {
+	return newStore(cfg, false)
+}
+
+// NewDummy creates a store that generates metrics without scraping endpoints.
+func NewDummy(cfg *config.Config) *Store {
+	return newStore(cfg, true)
+}
+
+func newStore(cfg *config.Config, dummy bool) *Store {
 	return &Store{
 		engine:   collector.NewEngine(cfg.ScrapeTimeout),
 		nodes:    append([]config.NodeConfig(nil), cfg.Nodes...),
 		interval: cfg.ScrapeInterval,
+		dummy:    dummy,
 		reloadCh: make(chan struct{}, 1),
 		subs:     make(map[uint64]*subscriber),
 	}
@@ -50,7 +61,13 @@ func New(cfg *config.Config) *Store {
 // Reload applies a new configuration without restarting the process.
 // Listen address changes are ignored (requires restart).
 func (s *Store) Reload(cfg *config.Config) error {
-	if err := cfg.Validate(); err != nil {
+	var err error
+	if s.dummy {
+		err = cfg.ValidateDummy()
+	} else {
+		err = cfg.Validate()
+	}
+	if err != nil {
 		return err
 	}
 	s.mu.Lock()
@@ -153,7 +170,7 @@ func (s *Store) nodeLoop(ctx context.Context, node config.NodeConfig, defaultInt
 
 func (s *Store) collectNode(ctx context.Context, node config.NodeConfig) {
 	start := time.Now()
-	state := s.engine.CollectOne(ctx, node)
+	state := s.collectNodeState(ctx, node)
 
 	s.mu.Lock()
 	s.applyNodeStateLocked(state)
@@ -170,6 +187,32 @@ func (s *Store) collectNode(ctx context.Context, node config.NodeConfig) {
 	s.mu.Unlock()
 
 	s.notify()
+}
+
+func (s *Store) collectNodeState(ctx context.Context, node config.NodeConfig) domain.NodeState {
+	if !s.dummy {
+		return s.engine.CollectOne(ctx, node)
+	}
+
+	state := domain.NodeState{
+		Name:        node.Name,
+		CollectedAt: time.Now().UTC(),
+		Reachable:   true,
+	}
+	if node.Wants(config.CollectCPU) {
+		state.CPU = domain.Ptr(42)
+	}
+	if node.Wants(config.CollectGPU) {
+		state.GPU = domain.Ptr(67)
+	}
+	if node.Wants(config.CollectMem) {
+		state.MemUsed = domain.Ptr(58)
+		state.MemCached = domain.Ptr(23)
+	}
+	if node.Wants(config.CollectSwap) {
+		state.SwapUsed = domain.Ptr(12)
+	}
+	return state
 }
 
 func (s *Store) applyNodeStateLocked(state domain.NodeState) {

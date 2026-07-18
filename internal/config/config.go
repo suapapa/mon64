@@ -43,6 +43,16 @@ type NodeConfig struct {
 
 // Load reads and validates configuration from path.
 func Load(path string) (*Config, error) {
+	return load(path, false)
+}
+
+// LoadDummy reads configuration for dummy mode. Node Prometheus settings are
+// ignored, so only node names and requested collections are validated.
+func LoadDummy(path string) (*Config, error) {
+	return load(path, true)
+}
+
+func load(path string, dummy bool) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read config: %w", err)
@@ -51,7 +61,7 @@ func Load(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
-	if err := cfg.Validate(); err != nil {
+	if err := cfg.validate(dummy); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
@@ -59,6 +69,15 @@ func Load(path string) (*Config, error) {
 
 // Validate checks required fields and allowed values.
 func (c *Config) Validate() error {
+	return c.validate(false)
+}
+
+// ValidateDummy checks configuration used in dummy mode.
+func (c *Config) ValidateDummy() error {
+	return c.validate(true)
+}
+
+func (c *Config) validate(dummy bool) error {
 	if c.Listen == "" {
 		return fmt.Errorf("listen is required")
 	}
@@ -80,12 +99,6 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("nodes[%d]: duplicate name %q", i, n.Name)
 		}
 		names[n.Name] = struct{}{}
-		if n.PromFmt != PromFmtNodeExporter && n.PromFmt != PromFmtNvMonitor {
-			return fmt.Errorf("nodes[%d]: prom_fmt must be %q or %q", i, PromFmtNodeExporter, PromFmtNvMonitor)
-		}
-		if n.PromEndpoint == "" {
-			return fmt.Errorf("nodes[%d]: prom_endpoint is required", i)
-		}
 		if len(n.Collects) == 0 {
 			return fmt.Errorf("nodes[%d]: collects must not be empty", i)
 		}
@@ -95,6 +108,15 @@ func (c *Config) Validate() error {
 			default:
 				return fmt.Errorf("nodes[%d].collects[%d]: unknown kind %q", i, j, k)
 			}
+		}
+		if dummy {
+			continue
+		}
+		if n.PromFmt != PromFmtNodeExporter && n.PromFmt != PromFmtNvMonitor {
+			return fmt.Errorf("nodes[%d]: prom_fmt must be %q or %q", i, PromFmtNodeExporter, PromFmtNvMonitor)
+		}
+		if n.PromEndpoint == "" {
+			return fmt.Errorf("nodes[%d]: prom_endpoint is required", i)
 		}
 		if n.PromFmt == PromFmtNodeExporter {
 			for _, k := range n.Collects {
