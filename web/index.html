@@ -3,49 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>mon64</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header>
-    <h1>mon64</h1>
-    <p class="meta">Updated {{ .CollectedAt.Format "2006-01-02 15:04:05 UTC" }}</p>
+  <a class="skip-link" href="#fleet">Skip to nodes</a>
+  <header class="masthead">
+    <div class="brand">
+      <h1>mon64</h1>
+    </div>
+    <div class="status-line">
+      <p class="meta" aria-live="polite">Updated {{ .CollectedAt.Format "2006-01-02 15:04:05 UTC" }}</p>
+      <p class="live" data-state="connecting" id="live-status" role="status" aria-live="polite">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="live-label">connecting</span>
+      </p>
+    </div>
   </header>
   <main>
-    <a class="badge-stack" href="/api/v1/badge?t={{ .CollectedAt.UnixMilli }}" title="All node badges">
-      <img src="/api/v1/badge?t={{ .CollectedAt.UnixMilli }}" alt="All node badges" width="256">
-    </a>
-    <ul class="node-list">
-      {{ range .Nodes }}
-      <li class="node-row {{ if not .Reachable }}unreachable{{ end }}" data-name="{{ .Name }}">
-        <a class="badge" href="/api/v1/badge/{{ .Name }}.png?t={{ .CollectedAt.UnixMilli }}" title="{{ .Name }} badge">
-          <img src="/api/v1/badge/{{ .Name }}.png?t={{ .CollectedAt.UnixMilli }}" alt="{{ .Name }} badge" width="128">
-        </a>
-        {{ if not .Reachable }}
-        <p class="metrics error">{{ .LastError }}</p>
-        {{ else }}
-        <p class="metrics">
-          {{- if .Wants "cpu" -}}
-          <span>{{- if .CPU -}}CPU{{ printf "%.0f" (deref .CPU) }}%{{- else -}}CPUn/a{{- end -}}</span>
-          {{- end -}}
-          {{- if .Wants "gpu" -}}
-          <span>{{- if .GPU -}}GPU{{ printf "%.0f" (deref .GPU) }}%{{- else -}}GPUn/a{{- end -}}</span>
-          {{- end -}}
-          {{- if .Wants "mem" -}}
-          <span>{{- if .MemUsed -}}MEM{{ printf "%.0f" (deref .MemUsed) }}%{{- else -}}MEMn/a{{- end -}}</span>
-          {{- end -}}
-          {{- if .Wants "swap" -}}
-          <span>{{- if .SwapUsed -}}SWAP{{ printf "%.0f" (deref .SwapUsed) }}%{{- else -}}SWAPn/a{{- end -}}</span>
-          {{- end -}}
-        </p>
+    <section class="status-wall" aria-label="All node badges">
+      <a class="badge-stack" href="/api/v1/badge?t={{ .CollectedAt.UnixMilli }}" title="Open stacked badge PNG">
+        <img src="/api/v1/badge?t={{ .CollectedAt.UnixMilli }}" alt="Stacked status badges for all nodes">
+      </a>
+    </section>
+    <section id="fleet" class="fleet" aria-label="Nodes">
+      {{ if .Nodes }}
+      <ul class="node-list">
+        {{ range .Nodes }}
+        <li class="node-row {{ if not .Reachable }}unreachable{{ end }}" data-name="{{ .Name }}">
+          <a class="badge" href="/api/v1/badge/{{ .Name }}.png?t={{ .CollectedAt.UnixMilli }}" title="Open {{ .Name }} badge PNG">
+            <img src="/api/v1/badge/{{ .Name }}.png?t={{ .CollectedAt.UnixMilli }}" alt="{{ .Name }} status badge" width="128">
+          </a>
+          {{ if not .Reachable }}
+          <p class="metrics error" role="status">{{ .LastError }}</p>
+          {{ else }}
+          <p class="metrics">
+            {{- if .Wants "cpu" -}}
+            <span class="metric" data-level="{{ loadLevel .CPU }}">
+              <span class="metric-label">CPU</span>
+              <span class="metric-value">{{- if .CPU -}}{{ printf "%.0f" (deref .CPU) }}%{{- else -}}n/a{{- end -}}</span>
+            </span>
+            {{- end -}}
+            {{- if .Wants "gpu" -}}
+            <span class="metric" data-level="{{ loadLevel .GPU }}">
+              <span class="metric-label">GPU</span>
+              <span class="metric-value">{{- if .GPU -}}{{ printf "%.0f" (deref .GPU) }}%{{- else -}}n/a{{- end -}}</span>
+            </span>
+            {{- end -}}
+            {{- if .Wants "mem" -}}
+            <span class="metric" data-level="{{ loadLevel .MemUsed }}">
+              <span class="metric-label">MEM</span>
+              <span class="metric-value">{{- if .MemUsed -}}{{ printf "%.0f" (deref .MemUsed) }}%{{- else -}}n/a{{- end -}}</span>
+            </span>
+            {{- end -}}
+            {{- if .Wants "swap" -}}
+            <span class="metric" data-level="{{ loadLevel .SwapUsed }}">
+              <span class="metric-label">SWAP</span>
+              <span class="metric-value">{{- if .SwapUsed -}}{{ printf "%.0f" (deref .SwapUsed) }}%{{- else -}}n/a{{- end -}}</span>
+            </span>
+            {{- end -}}
+          </p>
+          {{ end }}
+        </li>
         {{ end }}
-      </li>
+      </ul>
+      {{ else }}
+      <p class="empty" role="status">No nodes configured. Add entries under <code>nodes</code> in the config YAML, then reload.</p>
       {{ end }}
-    </ul>
+    </section>
   </main>
   <footer>
-    <p><a href="/api/v1/nodes">JSON</a> · <a href="/api/v1/nodes.yaml">YAML</a> · <a href="/healthz">healthz</a></p>
-    <p>© Homin Lee &lt;<a href="mailto:i@homin.dev">i@homin.dev</a>&gt;</p>
+    <nav class="api-links" aria-label="API">
+      <a href="/api/v1/nodes">JSON</a>
+      <a href="/api/v1/nodes.yaml">YAML</a>
+      <a href="/healthz">healthz</a>
+    </nav>
+    <p class="credit">© Homin Lee &lt;<a href="mailto:i@homin.dev">i@homin.dev</a>&gt;</p>
   </footer>
   <script src="/static/dashboard.js"></script>
 </body>

@@ -47,6 +47,23 @@ func New(st *store.Store, log *slog.Logger, reg *metrics.Registry) (*Server, err
 			}
 			return *p
 		},
+		// loadLevel buckets match badge meter stops (blue→green→orange→red).
+		"loadLevel": func(p *float64) string {
+			if p == nil {
+				return "na"
+			}
+			v := *p
+			switch {
+			case v <= 33:
+				return "low"
+			case v <= 66:
+				return "mid"
+			case v < 90:
+				return "high"
+			default:
+				return "crit"
+			}
+		},
 	}
 	indexT, err := template.New("index.html").Funcs(funcs).ParseFS(web.FS, "index.html")
 	if err != nil {

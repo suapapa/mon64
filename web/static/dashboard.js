@@ -1,14 +1,53 @@
 (function () {
   const metaEl = document.querySelector('.meta');
-  const listEl = document.querySelector('.node-list');
+  const fleetEl = document.getElementById('fleet');
   const stackAnchorEl = document.querySelector('.badge-stack');
   const stackImgEl = document.querySelector('.badge-stack img');
-  if (!metaEl || !listEl) {
+  const liveEl = document.getElementById('live-status');
+  const liveLabelEl = liveEl && liveEl.querySelector('.live-label');
+
+  if (!metaEl) {
     return;
+  }
+
+  const evtSource = new EventSource('/api/v1/events');
+
+  function setLive(state, label) {
+    if (!liveEl || !liveLabelEl) {
+      return;
+    }
+    liveEl.dataset.state = state;
+    liveLabelEl.textContent = label;
+  }
+
+  function syncLiveFromFeed() {
+    if (evtSource.readyState === EventSource.OPEN) {
+      setLive('live', 'live');
+    } else if (evtSource.readyState === EventSource.CONNECTING) {
+      setLive('connecting', 'connecting');
+    } else {
+      setLive('reconnecting', 'reconnecting');
+    }
   }
 
   function fmtPct(v) {
     return v == null ? 'n/a' : Math.round(v) + '%';
+  }
+
+  function loadLevel(v) {
+    if (v == null || Number.isNaN(v)) {
+      return 'na';
+    }
+    if (v <= 33) {
+      return 'low';
+    }
+    if (v <= 66) {
+      return 'mid';
+    }
+    if (v < 90) {
+      return 'high';
+    }
+    return 'crit';
   }
 
   function fmtTime(iso) {
@@ -23,8 +62,13 @@
     return Array.isArray(node.collects) && node.collects.indexOf(kind) !== -1;
   }
 
-  function metricToken(label, value) {
-    return label + fmtPct(value);
+  function metricHTML(label, value) {
+    return (
+      '<span class="metric" data-level="' + loadLevel(value) + '">' +
+      '<span class="metric-label">' + escapeHTML(label) + '</span>' +
+      '<span class="metric-value">' + escapeHTML(fmtPct(value)) + '</span>' +
+      '</span>'
+    );
   }
 
   function metricsHTML(node) {
@@ -33,16 +77,16 @@
     }
     const parts = [];
     if (wants(node, 'cpu')) {
-      parts.push('<span>' + escapeHTML(metricToken('CPU', node.cpu)) + '</span>');
+      parts.push(metricHTML('CPU', node.cpu));
     }
     if (wants(node, 'gpu')) {
-      parts.push('<span>' + escapeHTML(metricToken('GPU', node.gpu)) + '</span>');
+      parts.push(metricHTML('GPU', node.gpu));
     }
     if (wants(node, 'mem')) {
-      parts.push('<span>' + escapeHTML(metricToken('MEM', node.mem_used)) + '</span>');
+      parts.push(metricHTML('MEM', node.mem_used));
     }
     if (wants(node, 'swap')) {
-      parts.push('<span>' + escapeHTML(metricToken('SWAP', node.swap_used)) + '</span>');
+      parts.push(metricHTML('SWAP', node.swap_used));
     }
     return parts.join('');
   }
@@ -69,14 +113,41 @@
     const cls = node.reachable ? 'node-row' : 'node-row unreachable';
     const url = badgeURL(node);
     const metricsCls = node.reachable ? 'metrics' : 'metrics error';
+    const role = node.reachable ? '' : ' role="status"';
     return (
       '<li class="' + cls + '" data-name="' + escapeHTML(node.name) + '">' +
-      '<a class="badge" href="' + url + '" title="' + escapeHTML(node.name) + ' badge">' +
-      '<img src="' + url + '" alt="' + escapeHTML(node.name) + ' badge" width="128">' +
+      '<a class="badge" href="' + url + '" title="Open ' + escapeHTML(node.name) + ' badge PNG">' +
+      '<img src="' + url + '" alt="' + escapeHTML(node.name) + ' status badge" width="128">' +
       '</a>' +
-      '<p class="' + metricsCls + '">' + metricsHTML(node) + '</p>' +
+      '<p class="' + metricsCls + '"' + role + '>' + metricsHTML(node) + '</p>' +
       '</li>'
     );
+  }
+
+  function emptyHTML() {
+    return (
+      '<p class="empty" role="status">' +
+      'No nodes configured. Add entries under <code>nodes</code> in the config YAML, then reload.' +
+      '</p>'
+    );
+  }
+
+  function ensureList() {
+    if (!fleetEl) {
+      return null;
+    }
+    let list = fleetEl.querySelector('.node-list');
+    if (list) {
+      return list;
+    }
+    const empty = fleetEl.querySelector('.empty');
+    if (empty) {
+      empty.remove();
+    }
+    list = document.createElement('ul');
+    list.className = 'node-list';
+    fleetEl.appendChild(list);
+    return list;
   }
 
   function setBadgeSrc(img, url) {
@@ -101,20 +172,24 @@
     const metrics = li.querySelector('.metrics');
     if (anchor) {
       anchor.href = url;
-      anchor.title = node.name + ' badge';
+      anchor.title = 'Open ' + node.name + ' badge PNG';
     }
     if (img) {
       setBadgeSrc(img, url);
-      img.alt = node.name + ' badge';
+      img.alt = node.name + ' status badge';
     }
     if (metrics) {
       metrics.className = node.reachable ? 'metrics' : 'metrics error';
+      if (node.reachable) {
+        metrics.removeAttribute('role');
+      } else {
+        metrics.setAttribute('role', 'status');
+      }
       metrics.innerHTML = metricsHTML(node);
     }
   }
 
-  function sameNodeOrder(nodes) {
-    const rows = listEl.querySelectorAll('.node-row');
+  function sameNodeOrder(nodes, rows) {
     if (rows.length !== nodes.length) {
       return false;
     }
@@ -130,10 +205,12 @@
     try {
       const res = await fetch('/api/v1/nodes');
       if (!res.ok) {
+        setLive('error', 'refresh failed');
         return;
       }
       const data = await res.json();
       metaEl.textContent = 'Updated ' + fmtTime(data.collected_at);
+      syncLiveFromFeed();
       const stackURL = stackBadgeURL(data.collected_at);
       if (stackAnchorEl) {
         stackAnchorEl.href = stackURL;
@@ -142,22 +219,34 @@
         setBadgeSrc(stackImgEl, stackURL);
       }
       const nodes = data.nodes || [];
-      if (!sameNodeOrder(nodes)) {
-        listEl.innerHTML = nodes.map(renderRow).join('');
+      if (nodes.length === 0) {
+        if (fleetEl) {
+          fleetEl.innerHTML = emptyHTML();
+        }
         return;
       }
-      const rows = listEl.querySelectorAll('.node-row');
+      const list = ensureList();
+      if (!list) {
+        return;
+      }
+      const rows = list.querySelectorAll('.node-row');
+      if (!sameNodeOrder(nodes, rows)) {
+        list.innerHTML = nodes.map(renderRow).join('');
+        return;
+      }
       for (let i = 0; i < nodes.length; i++) {
         updateRow(rows[i], nodes[i]);
       }
     } catch (_) {
-      // ignore transient network errors
+      setLive('error', 'refresh failed');
     }
   }
 
-  const evtSource = new EventSource('/api/v1/events');
   evtSource.addEventListener('update', refresh);
+  evtSource.onopen = function () {
+    setLive('live', 'live');
+  };
   evtSource.onerror = function () {
-    // EventSource reconnects automatically
+    setLive('reconnecting', 'reconnecting');
   };
 })();
