@@ -1,0 +1,18 @@
+services:
+  mon64:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mon64:latest
+    container_name: mon64
+    restart: unless-stopped
+    # Pixoo64 discovery/updates happen over the LAN, so the container must share
+    # the host network to reach the device's private IP.
+    network_mode: host
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    command:
+      - "-config"
+      - "/config.yaml"
+      - "-export"
+      - "pixoo64"
