@@ -2,6 +2,8 @@
 
 Prometheus endpoint aggregator that normalizes remote server metrics into a web dashboard, JSON/YAML API, and compact PNG badges.
 
+![badge](badge.webp)
+
 ## Build
 
 ```bash
