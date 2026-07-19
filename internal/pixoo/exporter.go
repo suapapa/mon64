@@ -107,6 +107,12 @@ func (e *Exporter) Run(ctx context.Context) {
 func (e *Exporter) send() {
 	snapshot := e.source.Snapshot()
 	frame := badgeFrame(snapshot.Nodes)
+	// Pixoo64 keeps showing the previous frame when PicID is reused
+	// without Draw/ResetHttpGifId first.
+	if err := e.client.ResetSendingAnimationPicID(); err != nil {
+		e.log.Error("Pixoo64 export failed", "err", err)
+		return
+	}
 	err := e.client.SendAnimationImgs(
 		animationID,
 		[]int{frameSpeedMS},

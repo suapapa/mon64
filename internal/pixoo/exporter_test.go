@@ -23,12 +23,14 @@ func (f *fakeSource) Subscribe() (<-chan struct{}, func()) {
 }
 
 type fakeClient struct {
+	resets int
 	id     int
 	speeds []int
 	images []image.Image
 }
 
 func (f *fakeClient) ResetSendingAnimationPicID() error {
+	f.resets++
 	return nil
 }
 
@@ -91,7 +93,11 @@ func TestExporterSend(t *testing.T) {
 	pixooExporter := &Exporter{source: source, client: client, log: log}
 
 	pixooExporter.send()
+	pixooExporter.send()
 
+	if client.resets != 2 {
+		t.Fatalf("resets = %d, want 2", client.resets)
+	}
 	if client.id != animationID {
 		t.Fatalf("animation ID = %d, want %d", client.id, animationID)
 	}
