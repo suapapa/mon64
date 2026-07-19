@@ -148,6 +148,50 @@ func TestBadgeStackPNG(t *testing.T) {
 	}
 }
 
+// 3 nodes with 3+2+2 meters + 2 separators → exactly 64×64.
+func TestBadgeStackPNGFits64(t *testing.T) {
+	v := 1.0
+	nodes := []domain.NodeState{
+		{
+			Name:      "spark",
+			Reachable: true,
+			Collects:  []string{"cpu", "gpu", "mem"},
+			CPU:       &v,
+			GPU:       &v,
+			MemUsed:   &v,
+		},
+		{
+			Name:      "vraptor",
+			Reachable: true,
+			Collects:  []string{"cpu", "mem"},
+			CPU:       &v,
+			MemUsed:   &v,
+		},
+		{
+			Name:      "OMV",
+			Reachable: true,
+			Collects:  []string{"cpu", "mem"},
+			CPU:       &v,
+			MemUsed:   &v,
+		},
+	}
+	w, h := exporter.BadgeStackSize(nodes)
+	if w != 64 || h != 64 {
+		t.Fatalf("stack size = %dx%d, want 64x64", w, h)
+	}
+	data, err := exporter.BadgeStackPNG(nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := img.Bounds().Size(); got.X != 64 || got.Y != 64 {
+		t.Fatalf("png size = %dx%d, want 64x64", got.X, got.Y)
+	}
+}
+
 func TestBadgeStackPNGEmpty(t *testing.T) {
 	data, err := exporter.BadgeStackPNG([]domain.NodeState{})
 	if err != nil {

@@ -115,7 +115,8 @@ func badgeHeight(node domain.NodeState) int {
 	if n == 0 {
 		return h + badgeBottomPad
 	}
-	return h + n*(lh+badgeMeterGap)
+	// Match drawMeter stride (lh-1 content + badgeMeterGap).
+	return h + n*meterStride(lh)
 }
 
 func meterCount(node domain.NodeState) int {
@@ -128,11 +129,16 @@ func meterCount(node domain.NodeState) int {
 	return n
 }
 
+// meterStride is the vertical advance per meter row (bar is lh-1 tall).
+func meterStride(lh int) int {
+	return lh - 1 + badgeMeterGap
+}
+
 func badgeStackHeight(nodes []domain.NodeState) int {
 	if len(nodes) == 0 {
 		return 0
 	}
-	height := badgeStackGap // * (len(nodes) - 1)
+	height := (len(nodes) - 1) * badgeStackGap
 	for _, node := range nodes {
 		height += badgeHeight(node)
 	}
@@ -169,7 +175,7 @@ func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
 	}
 	valueW := badgeFont.measure(valueStr, badgeFontScale)
 	drawText(img, right-valueW, baseline, valueStr, valueColor)
-	return y + lh - 1 + badgeMeterGap
+	return y + meterStride(lh)
 }
 
 func levelColor(pct float64) color.RGBA {
