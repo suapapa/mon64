@@ -217,9 +217,20 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 ---
 
+## T022 — Pixoo64 exporter
+
+**Status:** done
+
+- [x] Add `-export pixoo64` CLI flag
+- [x] Discover a Pixoo64 with `go_divoom`
+- [x] Send the stacked badge after snapshot changes
+- [x] Fit variable-height stacks to the 64×64 display
+
+---
+
 ## Dependency graph
 
 ```
 T001 → T002,T003 → T004,T005 → T006,T007 → T008 → T009 → T010,T011 → T012,T013 → T014 → T015 → T016
-T017–T020 independent optional follow-ups
+T017–T020,T022 independent optional follow-ups
 ```

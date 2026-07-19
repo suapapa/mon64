@@ -23,6 +23,16 @@ Use dummy mode to preview the dashboard without Prometheus endpoints:
 In dummy mode, each node only needs `name` and `collects`; requested metrics
 receive fixed sample values and no remote requests are made.
 
+To mirror the stacked badge to a Pixoo64 on the same LAN:
+
+```bash
+./bin/mon64 -config configs/example.yaml -export pixoo64
+```
+
+The Pixoo64 is discovered automatically. The display is refreshed after
+snapshot changes; stacks taller than 64 pixels are scaled to fit the 64×64
+display.
+
 ## Configuration
 
 See `configs/example.yaml`. Key fields:

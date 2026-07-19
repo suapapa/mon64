@@ -45,6 +45,11 @@ func BadgePNG(node domain.NodeState) ([]byte, error) {
 
 // BadgeStackPNG renders all node badges vertically with black separators.
 func BadgeStackPNG(nodes []domain.NodeState) ([]byte, error) {
+	return encodePNG(BadgeStackImage(nodes))
+}
+
+// BadgeStackImage renders all node badges vertically with black separators.
+func BadgeStackImage(nodes []domain.NodeState) image.Image {
 	height := badgeStackHeight(nodes)
 	if height == 0 {
 		height = 1
@@ -60,7 +65,7 @@ func BadgeStackPNG(nodes []domain.NodeState) ([]byte, error) {
 		y = target.Max.Y + badgeStackGap
 	}
 
-	return encodePNG(stack)
+	return stack
 }
 
 func badgeImage(node domain.NodeState) *image.RGBA {

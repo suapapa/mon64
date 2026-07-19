@@ -13,6 +13,7 @@ import (
 
 	"github.com/suapapa/mon64/internal/config"
 	"github.com/suapapa/mon64/internal/metrics"
+	"github.com/suapapa/mon64/internal/pixoo"
 	"github.com/suapapa/mon64/internal/server"
 	"github.com/suapapa/mon64/internal/store"
 )
@@ -20,6 +21,7 @@ import (
 func main() {
 	configPath := flag.String("config", "configs/example.yaml", "path to YAML config")
 	dummy := flag.Bool("dummy", false, "generate dummy metrics without connecting to Prometheus endpoints")
+	exportTarget := flag.String("export", "", "external display target (pixoo64)")
 	flag.Parse()
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
@@ -45,6 +47,22 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go st.Start(ctx)
+
+	switch *exportTarget {
+	case "":
+	case "pixoo64":
+		go func() {
+			pixooExporter, err := pixoo.New(st, log)
+			if err != nil {
+				log.Error("Pixoo64 exporter disabled", "err", err)
+				return
+			}
+			pixooExporter.Run(ctx)
+		}()
+	default:
+		log.Error("unsupported export target", "target", *exportTarget)
+		os.Exit(2)
+	}
 
 	var listen atomic.Value
 	listen.Store(cfg.Listen)
