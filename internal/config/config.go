@@ -11,6 +11,12 @@ import (
 const (
 	PromFmtNodeExporter = "node-exporter"
 	PromFmtNvMonitor    = "nv-monitor"
+
+	BadgeTypeRect64 = "rect64"
+	// BadgeTypeCircle128 is reserved; not implemented yet.
+	BadgeTypeCircle128 = "circle128"
+
+	ExportPixoo64 = "pixoo64"
 )
 
 // CollectKind identifies which metrics to derive for a node.
@@ -28,7 +34,27 @@ type Config struct {
 	Listen         string        `yaml:"listen"`
 	ScrapeInterval time.Duration `yaml:"scrape_interval"`
 	ScrapeTimeout  time.Duration `yaml:"scrape_timeout"`
+	Exports        ExportsConfig `yaml:"exports"`
+	Badges         []BadgeConfig `yaml:"badges"`
 	Nodes          []NodeConfig  `yaml:"nodes"`
+}
+
+// ExportsConfig binds named badges to external display targets.
+type ExportsConfig struct {
+	Pixoo64 []Pixoo64Export `yaml:"pixoo64"`
+}
+
+// Pixoo64Export pushes one named badge to a discovered Pixoo64.
+type Pixoo64Export struct {
+	Badge string `yaml:"badge"`
+}
+
+// BadgeConfig describes a named composite badge.
+type BadgeConfig struct {
+	Name    string   `yaml:"name"`
+	Type    string   `yaml:"type"`
+	Nodes   []string `yaml:"nodes"`
+	Exports []string `yaml:"exports"`
 }
 
 // NodeConfig describes one monitored endpoint.
@@ -130,6 +156,99 @@ func (c *Config) validate(dummy bool) error {
 			return fmt.Errorf("nodes[%d]: scrape_timeout must be less than scrape_interval (%v)", i, interval)
 		}
 	}
+	return c.validateBadgesAndExports(names)
+}
+
+func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
+	badgeNames := make(map[string]struct{}, len(c.Badges))
+	badgeExports := make(map[string]map[string]struct{}, len(c.Badges))
+
+	for i, b := range c.Badges {
+		if b.Name == "" {
+			return fmt.Errorf("badges[%d]: name is required", i)
+		}
+		if _, dup := badgeNames[b.Name]; dup {
+			return fmt.Errorf("badges[%d]: duplicate name %q", i, b.Name)
+		}
+		badgeNames[b.Name] = struct{}{}
+
+		switch b.Type {
+		case BadgeTypeRect64:
+		case BadgeTypeCircle128:
+			return fmt.Errorf("badges[%d]: type %q is not implemented yet", i, b.Type)
+		case "":
+			return fmt.Errorf("badges[%d]: type is required", i)
+		default:
+			return fmt.Errorf("badges[%d]: unknown type %q", i, b.Type)
+		}
+
+		if len(b.Nodes) == 0 {
+			return fmt.Errorf("badges[%d]: nodes must not be empty", i)
+		}
+		seenNodes := make(map[string]struct{}, len(b.Nodes))
+		for j, nodeName := range b.Nodes {
+			if nodeName == "" {
+				return fmt.Errorf("badges[%d].nodes[%d]: name is required", i, j)
+			}
+			if _, ok := nodeNames[nodeName]; !ok {
+				return fmt.Errorf("badges[%d].nodes[%d]: unknown node %q", i, j, nodeName)
+			}
+			if _, dup := seenNodes[nodeName]; dup {
+				return fmt.Errorf("badges[%d].nodes[%d]: duplicate node %q", i, j, nodeName)
+			}
+			seenNodes[nodeName] = struct{}{}
+		}
+
+		exps := make(map[string]struct{}, len(b.Exports))
+		for j, exp := range b.Exports {
+			switch exp {
+			case ExportPixoo64:
+			case "":
+				return fmt.Errorf("badges[%d].exports[%d]: name is required", i, j)
+			default:
+				return fmt.Errorf("badges[%d].exports[%d]: unknown export %q", i, j, exp)
+			}
+			if _, dup := exps[exp]; dup {
+				return fmt.Errorf("badges[%d].exports[%d]: duplicate export %q", i, j, exp)
+			}
+			exps[exp] = struct{}{}
+		}
+		badgeExports[b.Name] = exps
+	}
+
+	seenPixooBadges := make(map[string]struct{}, len(c.Exports.Pixoo64))
+	for i, exp := range c.Exports.Pixoo64 {
+		if exp.Badge == "" {
+			return fmt.Errorf("exports.pixoo64[%d]: badge is required", i)
+		}
+		if _, ok := badgeNames[exp.Badge]; !ok {
+			return fmt.Errorf("exports.pixoo64[%d]: unknown badge %q", i, exp.Badge)
+		}
+		if _, dup := seenPixooBadges[exp.Badge]; dup {
+			return fmt.Errorf("exports.pixoo64[%d]: duplicate badge %q", i, exp.Badge)
+		}
+		seenPixooBadges[exp.Badge] = struct{}{}
+
+		if _, ok := badgeExports[exp.Badge][ExportPixoo64]; !ok {
+			return fmt.Errorf(
+				"exports.pixoo64[%d]: badge %q must list %q under badges[].exports",
+				i, exp.Badge, ExportPixoo64,
+			)
+		}
+	}
+
+	for name, exps := range badgeExports {
+		if _, wants := exps[ExportPixoo64]; !wants {
+			continue
+		}
+		if _, ok := seenPixooBadges[name]; !ok {
+			return fmt.Errorf(
+				"badge %q lists export %q but is missing from exports.pixoo64",
+				name, ExportPixoo64,
+			)
+		}
+	}
+
 	return nil
 }
 

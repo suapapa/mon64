@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/suapapa/mon64/internal/config"
+	"github.com/suapapa/mon64/internal/domain"
 	"github.com/suapapa/mon64/internal/exporter"
 	"github.com/suapapa/mon64/internal/metrics"
 	"github.com/suapapa/mon64/internal/store"
@@ -22,6 +24,13 @@ type Server struct {
 	engine  *gin.Engine
 	metrics *metrics.Registry
 	indexT  *template.Template
+}
+
+// indexData is the dashboard template model.
+type indexData struct {
+	CollectedAt time.Time
+	Nodes       []domain.NodeState
+	Badges      []config.BadgeConfig
 }
 
 // New builds Gin route handlers.
@@ -76,7 +85,6 @@ func New(st *store.Store, log *slog.Logger, reg *metrics.Registry) (*Server, err
 	r.GET("/api/v1/nodes", s.handleNodesJSON)
 	r.GET("/api/v1/nodes.yaml", s.handleNodesYAML)
 	r.GET("/api/v1/events", s.handleEvents)
-	r.GET("/api/v1/badge", s.handleBadgeStack)
 	r.GET("/api/v1/badge/:name", s.handleBadge)
 	r.GET("/", s.handleIndex)
 	r.StaticFS("/static", http.FS(static))
@@ -125,21 +133,13 @@ func (s *Server) handleBadge(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	node, ok := s.store.NodeByName(name)
+	badge, ok := s.store.BadgeByName(name)
 	if !ok {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	data, err := exporter.BadgePNG(node)
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-	c.Data(http.StatusOK, "image/png", data)
-}
-
-func (s *Server) handleBadgeStack(c *gin.Context) {
-	data, err := exporter.BadgeStackPNG(s.store.Snapshot().Nodes)
+	nodes := exporter.SelectBadgeNodes(badge, s.store.Snapshot())
+	data, err := exporter.BadgePNG(badge.Type, nodes)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -149,8 +149,13 @@ func (s *Server) handleBadgeStack(c *gin.Context) {
 
 func (s *Server) handleIndex(c *gin.Context) {
 	snap := s.store.Snapshot()
+	data := indexData{
+		CollectedAt: snap.CollectedAt,
+		Nodes:       snap.Nodes,
+		Badges:      s.store.Badges(),
+	}
 	c.Header("Content-Type", "text/html; charset=utf-8")
-	if err := s.indexT.Execute(c.Writer, snap); err != nil {
+	if err := s.indexT.Execute(c.Writer, data); err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 	}
 }

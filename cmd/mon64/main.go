@@ -21,7 +21,6 @@ import (
 func main() {
 	configPath := flag.String("config", "configs/example.yaml", "path to YAML config")
 	dummy := flag.Bool("dummy", false, "generate dummy metrics without connecting to Prometheus endpoints")
-	exportTarget := flag.String("export", "", "external display target (pixoo64)")
 	flag.Parse()
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
@@ -48,20 +47,19 @@ func main() {
 	defer cancel()
 	go st.Start(ctx)
 
-	switch *exportTarget {
-	case "":
-	case "pixoo64":
+	if len(cfg.Exports.Pixoo64) > 0 {
+		badgeNames := make([]string, len(cfg.Exports.Pixoo64))
+		for i, exp := range cfg.Exports.Pixoo64 {
+			badgeNames[i] = exp.Badge
+		}
 		go func() {
-			pixooExporter, err := pixoo.New(st, log)
+			pixooExporter, err := pixoo.New(st, badgeNames, log)
 			if err != nil {
 				log.Error("Pixoo64 exporter disabled", "err", err)
 				return
 			}
 			pixooExporter.Run(ctx)
 		}()
-	default:
-		log.Error("unsupported export target", "target", *exportTarget)
-		os.Exit(2)
 	}
 
 	var listen atomic.Value

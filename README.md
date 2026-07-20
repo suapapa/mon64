@@ -25,15 +25,10 @@ Use dummy mode to preview the dashboard without Prometheus endpoints:
 In dummy mode, each node only needs `name` and `collects`; requested metrics
 receive fixed sample values and no remote requests are made.
 
-To mirror the stacked badge to a Pixoo64 on the same LAN:
-
-```bash
-./bin/mon64 -config configs/example.yaml -export pixoo64
-```
-
-The Pixoo64 is discovered automatically. The display is refreshed after
-snapshot changes; stacks taller than 64 pixels are scaled to fit the 64×64
-display.
+When `exports.pixoo64` is set in the config, mon64 discovers a Pixoo64 on the
+LAN and pushes the referenced named badge(s) after snapshot changes. Stacks
+taller than 64 pixels are scaled to fit the 64×64 display. Adding or removing
+Pixoo exports requires a process restart.
 
 ## Configuration
 
@@ -47,16 +42,18 @@ See `configs/example.yaml`. Key fields:
 | `nodes[].prom_fmt` | `node-exporter` or `nv-monitor` |
 | `nodes[].prom_api_key` | Optional bearer token; when set, sends `Authorization: Bearer {key}` |
 | `nodes[].collects` | Subset of `cpu`, `gpu`, `mem`, `swap` |
+| `badges[].type` | Badge renderer (`rect64` implemented; `circle128` reserved) |
+| `badges[].nodes` | Node names included in the named badge (order preserved) |
+| `exports.pixoo64[].badge` | Named badge to push to a discovered Pixoo64 |
 
 ## HTTP endpoints
 
 | Path | Description |
 |------|-------------|
-| `GET /` | Dashboard (all nodes) |
+| `GET /` | Dashboard (named badges + node metrics) |
 | `GET /api/v1/nodes` | Canonical JSON snapshot |
 | `GET /api/v1/nodes.yaml` | YAML snapshot |
-| `GET /api/v1/badge` | All 64px-wide node badges stacked with 1px separators |
-| `GET /api/v1/badge/{node}.png` | One 64px-wide node badge |
+| `GET /api/v1/badge/{badge}` | Named composite badge PNG (optional `.png` suffix) |
 | `GET /healthz` | Liveness probe |
 | `GET /metrics` | mon64 self-metrics (Prometheus text) |
 

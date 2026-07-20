@@ -194,7 +194,7 @@ h1 {
   }
 }
 
-/* —— Status wall (signature) —— */
+/* —— Status wall (named badges) —— */
 main {
   flex: 1 1 auto;
   width: 100%;
@@ -206,7 +206,16 @@ main {
   margin-bottom: var(--space-4);
 }
 
-.badge-stack {
+.badge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.named-badge {
   display: block;
   width: 100%;
   max-width: 100%;
@@ -219,16 +228,16 @@ main {
   transition: border-color var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out);
 }
 
-.badge-stack:hover {
+.named-badge:hover {
   border-color: var(--accent);
   background: var(--badge-frame-hover);
 }
 
-.badge-stack:focus-visible {
+.named-badge:focus-visible {
   border-color: var(--focus-ring);
 }
 
-.badge-stack img {
+.named-badge img {
   display: block;
   width: 66.666%;
   height: auto;
@@ -258,7 +267,7 @@ main {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  padding: var(--space-2) var(--space-3);
   transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out);
 }
 
@@ -271,24 +280,12 @@ main {
   background: color-mix(in srgb, var(--error) 8%, var(--surface));
 }
 
-.badge {
+.node-name {
+  margin: 0;
   flex: 0 0 auto;
-  line-height: 0;
-  border-radius: 3px;
-  transition: opacity var(--dur) var(--ease-out);
-}
-
-.badge:hover {
-  opacity: 0.92;
-}
-
-.badge img {
-  display: block;
-  width: 128px;
-  max-width: 100%;
-  height: auto;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  min-width: 5.5rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .metrics {
@@ -419,8 +416,8 @@ footer {
     padding: var(--space-2);
   }
 
-  .badge img {
-    width: min(128px, 100%);
+  .named-badge img {
+    width: min(100%, 12rem);
   }
 
   .metrics {

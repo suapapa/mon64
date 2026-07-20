@@ -228,9 +228,22 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 ---
 
+## T023 — Named badges & config-driven exports
+
+**Status:** done
+
+- [x] Parse `badges[]` / `exports.pixoo64` in config with cross-validation
+- [x] Badge type registry; implement `rect64` (meters under type, not HTTP)
+- [x] `GET /api/v1/badge/{badge_name}` only (remove per-node / all-stack routes)
+- [x] Dashboard shows configured named badges
+- [x] Pixoo64 starts from `exports.pixoo64` (remove `-export` CLI)
+- [x] Reject unimplemented `circle128` until added
+
+---
+
 ## Dependency graph
 
 ```
 T001 → T002,T003 → T004,T005 → T006,T007 → T008 → T009 → T010,T011 → T012,T013 → T014 → T015 → T016
-T017–T020,T022 independent optional follow-ups
+T017–T020,T022–T023 independent optional follow-ups
 ```

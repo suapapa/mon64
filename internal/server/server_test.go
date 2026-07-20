@@ -30,6 +30,11 @@ func testStore(t *testing.T) *store.Store {
 		Listen:         ":8080",
 		ScrapeInterval: time.Hour,
 		ScrapeTimeout:  time.Second,
+		Badges: []config.BadgeConfig{{
+			Name:  "homelab",
+			Type:  config.BadgeTypeRect64,
+			Nodes: []string{"spark"},
+		}},
 		Nodes: []config.NodeConfig{{
 			Name:     "spark",
 			PromFmt:  config.PromFmtNvMonitor,
@@ -43,6 +48,7 @@ func testStore(t *testing.T) *store.Store {
 		Nodes: []domain.NodeState{{
 			Name:      "spark",
 			Reachable: true,
+			Collects:  []string{"cpu"},
 			CPU:       &cpu,
 		}},
 	})
@@ -101,21 +107,9 @@ func TestHandlers(t *testing.T) {
 		}
 	})
 
-	t.Run("badge", func(t *testing.T) {
+	t.Run("named badge", func(t *testing.T) {
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/badge/spark.png", nil)
-		h.ServeHTTP(rec, req)
-		if rec.Code != http.StatusOK {
-			t.Fatalf("status %d", rec.Code)
-		}
-		if ct := rec.Header().Get("Content-Type"); ct != "image/png" {
-			t.Fatalf("content-type = %q", ct)
-		}
-	})
-
-	t.Run("stacked badge", func(t *testing.T) {
-		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/badge", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/badge/homelab.png", nil)
 		h.ServeHTTP(rec, req)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status %d", rec.Code)
@@ -132,9 +126,27 @@ func TestHandlers(t *testing.T) {
 		}
 	})
 
+	t.Run("named badge without extension", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/badge/homelab", nil)
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status %d", rec.Code)
+		}
+	})
+
 	t.Run("badge missing", func(t *testing.T) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/badge/nope.png", nil)
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("status %d", rec.Code)
+		}
+	})
+
+	t.Run("node name is not a badge", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/badge/spark.png", nil)
 		h.ServeHTTP(rec, req)
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("status %d", rec.Code)

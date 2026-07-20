@@ -11,6 +11,7 @@ import (
 	"time"
 
 	divoom "github.com/suapapa/go_divoom"
+	"github.com/suapapa/mon64/internal/config"
 	"github.com/suapapa/mon64/internal/domain"
 	"github.com/suapapa/mon64/internal/exporter"
 )
@@ -27,20 +28,25 @@ type animationClient interface {
 	SendAnimationImgs(id int, speedMSecs []int, imgs []image.Image) error
 }
 
-type snapshotSource interface {
+type badgeSource interface {
 	Snapshot() domain.Snapshot
 	Subscribe() (<-chan struct{}, func())
+	BadgeByName(name string) (config.BadgeConfig, bool)
 }
 
-// Exporter sends the latest stacked badge to a Pixoo64.
+// Exporter sends configured named badges to a Pixoo64.
 type Exporter struct {
-	source snapshotSource
-	client animationClient
-	log    *slog.Logger
+	source     badgeSource
+	client     animationClient
+	log        *slog.Logger
+	badgeNames []string
 }
 
 // New discovers a Pixoo64 on the local network.
-func New(source snapshotSource, log *slog.Logger) (*Exporter, error) {
+func New(source badgeSource, badgeNames []string, log *slog.Logger) (*Exporter, error) {
+	if len(badgeNames) == 0 {
+		return nil, fmt.Errorf("pixoo64: at least one badge name is required")
+	}
 	devices, err := divoom.FindDevice()
 	if err != nil {
 		return nil, fmt.Errorf("discover Pixoo64: %w", err)
@@ -58,8 +64,14 @@ func New(source snapshotSource, log *slog.Logger) (*Exporter, error) {
 			"Pixoo64 exporter enabled",
 			"device", device.DeviceName,
 			"address", device.DevicePrivateIP,
+			"badges", badgeNames,
 		)
-		return &Exporter{source: source, client: client, log: log}, nil
+		return &Exporter{
+			source:     source,
+			client:     client,
+			log:        log,
+			badgeNames: append([]string(nil), badgeNames...),
+		}, nil
 	}
 
 	return nil, fmt.Errorf("discover Pixoo64: no Pixoo64 found on LAN")
@@ -70,9 +82,7 @@ func (e *Exporter) Run(ctx context.Context) {
 	updates, unsubscribe := e.source.Subscribe()
 	defer unsubscribe()
 
-	if len(e.source.Snapshot().Nodes) > 0 {
-		e.send()
-	}
+	e.send()
 
 	var timer *time.Timer
 	var send <-chan time.Time
@@ -106,27 +116,42 @@ func (e *Exporter) Run(ctx context.Context) {
 
 func (e *Exporter) send() {
 	snapshot := e.source.Snapshot()
-	frame := badgeFrame(snapshot.Nodes)
+	frames := make([]image.Image, 0, len(e.badgeNames))
+	speeds := make([]int, 0, len(e.badgeNames))
+	for _, name := range e.badgeNames {
+		badge, ok := e.source.BadgeByName(name)
+		if !ok {
+			e.log.Error("Pixoo64 export skipped missing badge", "badge", name)
+			continue
+		}
+		nodes := exporter.SelectBadgeNodes(badge, snapshot)
+		img, err := exporter.BadgeImage(badge.Type, nodes)
+		if err != nil {
+			e.log.Error("Pixoo64 export render failed", "badge", name, "err", err)
+			continue
+		}
+		frames = append(frames, fitDisplay(img))
+		speeds = append(speeds, frameSpeedMS)
+	}
+	if len(frames) == 0 {
+		e.log.Error("Pixoo64 export failed", "err", "no badge frames")
+		return
+	}
 	// Pixoo64 keeps showing the previous frame when PicID is reused
 	// without Draw/ResetHttpGifId first.
 	if err := e.client.ResetSendingAnimationPicID(); err != nil {
 		e.log.Error("Pixoo64 export failed", "err", err)
 		return
 	}
-	err := e.client.SendAnimationImgs(
-		animationID,
-		[]int{frameSpeedMS},
-		[]image.Image{frame},
-	)
+	err := e.client.SendAnimationImgs(animationID, speeds, frames)
 	if err != nil {
 		e.log.Error("Pixoo64 export failed", "err", err)
 		return
 	}
-	e.log.Debug("Pixoo64 updated", "nodes", len(snapshot.Nodes))
+	e.log.Debug("Pixoo64 updated", "frames", len(frames))
 }
 
-func badgeFrame(nodes []domain.NodeState) image.Image {
-	src := exporter.BadgeStackImage(nodes)
+func fitDisplay(src image.Image) image.Image {
 	dst := image.NewRGBA(image.Rect(0, 0, displaySize, displaySize))
 	draw.Draw(dst, dst.Bounds(), image.NewUniform(color.Black), image.Point{}, draw.Src)
 

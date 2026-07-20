@@ -36,6 +36,15 @@ func TestLoadExampleConfig(t *testing.T) {
 	if len(cfg.Nodes) != 3 {
 		t.Fatalf("nodes = %d", len(cfg.Nodes))
 	}
+	if len(cfg.Badges) != 1 || cfg.Badges[0].Name != "homelab" {
+		t.Fatalf("badges = %#v", cfg.Badges)
+	}
+	if cfg.Badges[0].Type != config.BadgeTypeRect64 {
+		t.Fatalf("badge type = %q", cfg.Badges[0].Type)
+	}
+	if len(cfg.Exports.Pixoo64) != 1 || cfg.Exports.Pixoo64[0].Badge != "homelab" {
+		t.Fatalf("exports.pixoo64 = %#v", cfg.Exports.Pixoo64)
+	}
 }
 
 func TestLoadDummyOnlyRequiresNodeNameAndCollects(t *testing.T) {
@@ -74,6 +83,10 @@ func TestValidateErrors(t *testing.T) {
 		{"gpu on node-exporter", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [gpu]\n"},
 		{"timeout >= interval", "listen: \":8080\"\nscrape_interval: 5s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\n"},
 		{"node timeout >= node interval", "listen: \":8080\"\nscrape_interval: 60s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    scrape_interval: 3s\n    collects: [cpu]\n"},
+		{"unknown badge type", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: nope\n    nodes: [x]\n"},
+		{"circle128 not implemented", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: circle128\n    nodes: [x]\n"},
+		{"badge unknown node", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [missing]\n"},
+		{"export badge mismatch", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [x]\nexports:\n  pixoo64:\n    - badge: b\n"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

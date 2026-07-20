@@ -22,19 +22,27 @@
     </div>
   </header>
   <main>
-    <section class="status-wall" aria-label="All node badges">
-      <a class="badge-stack" href="/api/v1/badge?t={{ .CollectedAt.UnixMilli }}" title="Open stacked badge PNG">
-        <img src="/api/v1/badge?t={{ .CollectedAt.UnixMilli }}" alt="Stacked status badges for all nodes">
-      </a>
+    <section class="status-wall" aria-label="Configured badges">
+      {{ if .Badges }}
+      <ul class="badge-list">
+        {{ range .Badges }}
+        <li>
+          <a class="named-badge" data-badge="{{ .Name }}" href="/api/v1/badge/{{ .Name }}?t={{ $.CollectedAt.UnixMilli }}" title="Open {{ .Name }} badge PNG">
+            <img src="/api/v1/badge/{{ .Name }}?t={{ $.CollectedAt.UnixMilli }}" alt="{{ .Name }} status badge">
+          </a>
+        </li>
+        {{ end }}
+      </ul>
+      {{ else }}
+      <p class="empty" role="status">No badges configured. Add entries under <code>badges</code> in the config YAML, then reload.</p>
+      {{ end }}
     </section>
     <section id="fleet" class="fleet" aria-label="Nodes">
       {{ if .Nodes }}
       <ul class="node-list">
         {{ range .Nodes }}
         <li class="node-row {{ if not .Reachable }}unreachable{{ end }}" data-name="{{ .Name }}">
-          <a class="badge" href="/api/v1/badge/{{ .Name }}.png?t={{ .CollectedAt.UnixMilli }}" title="Open {{ .Name }} badge PNG">
-            <img src="/api/v1/badge/{{ .Name }}.png?t={{ .CollectedAt.UnixMilli }}" alt="{{ .Name }} status badge" width="128">
-          </a>
+          <p class="node-name">{{ .Name }}</p>
           {{ if not .Reachable }}
           <p class="metrics error" role="status">{{ .LastError }}</p>
           {{ else }}

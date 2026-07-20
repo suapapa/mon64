@@ -1,8 +1,6 @@
 (function () {
   const metaEl = document.querySelector('.meta');
   const fleetEl = document.getElementById('fleet');
-  const stackAnchorEl = document.querySelector('.badge-stack');
-  const stackImgEl = document.querySelector('.badge-stack img');
   const liveEl = document.getElementById('live-status');
   const liveLabelEl = liveEl && liveEl.querySelector('.live-label');
 
@@ -91,14 +89,9 @@
     return parts.join('');
   }
 
-  function badgeURL(node) {
-    const t = Date.parse(node.collected_at) || 0;
-    return '/api/v1/badge/' + encodeURIComponent(node.name) + '.png?t=' + t;
-  }
-
-  function stackBadgeURL(collectedAt) {
+  function badgeURL(name, collectedAt) {
     const t = Date.parse(collectedAt) || 0;
-    return '/api/v1/badge?t=' + t;
+    return '/api/v1/badge/' + encodeURIComponent(name) + '?t=' + t;
   }
 
   function escapeHTML(s) {
@@ -111,14 +104,11 @@
 
   function renderRow(node) {
     const cls = node.reachable ? 'node-row' : 'node-row unreachable';
-    const url = badgeURL(node);
     const metricsCls = node.reachable ? 'metrics' : 'metrics error';
     const role = node.reachable ? '' : ' role="status"';
     return (
       '<li class="' + cls + '" data-name="' + escapeHTML(node.name) + '">' +
-      '<a class="badge" href="' + url + '" title="Open ' + escapeHTML(node.name) + ' badge PNG">' +
-      '<img src="' + url + '" alt="' + escapeHTML(node.name) + ' status badge" width="128">' +
-      '</a>' +
+      '<p class="node-name">' + escapeHTML(node.name) + '</p>' +
       '<p class="' + metricsCls + '"' + role + '>' + metricsHTML(node) + '</p>' +
       '</li>'
     );
@@ -164,19 +154,27 @@
     pre.src = url;
   }
 
-  function updateRow(li, node) {
-    const url = badgeURL(node);
-    li.className = node.reachable ? 'node-row' : 'node-row unreachable';
-    const anchor = li.querySelector('a.badge');
-    const img = li.querySelector('img');
-    const metrics = li.querySelector('.metrics');
-    if (anchor) {
+  function updateNamedBadges(collectedAt) {
+    document.querySelectorAll('.named-badge').forEach(function (anchor) {
+      const name = anchor.getAttribute('data-badge');
+      if (!name) {
+        return;
+      }
+      const url = badgeURL(name, collectedAt);
       anchor.href = url;
-      anchor.title = 'Open ' + node.name + ' badge PNG';
-    }
-    if (img) {
-      setBadgeSrc(img, url);
-      img.alt = node.name + ' status badge';
+      const img = anchor.querySelector('img');
+      if (img) {
+        setBadgeSrc(img, url);
+      }
+    });
+  }
+
+  function updateRow(li, node) {
+    li.className = node.reachable ? 'node-row' : 'node-row unreachable';
+    const nameEl = li.querySelector('.node-name');
+    const metrics = li.querySelector('.metrics');
+    if (nameEl) {
+      nameEl.textContent = node.name;
     }
     if (metrics) {
       metrics.className = node.reachable ? 'metrics' : 'metrics error';
@@ -211,13 +209,7 @@
       const data = await res.json();
       metaEl.textContent = 'Updated ' + fmtTime(data.collected_at);
       syncLiveFromFeed();
-      const stackURL = stackBadgeURL(data.collected_at);
-      if (stackAnchorEl) {
-        stackAnchorEl.href = stackURL;
-      }
-      if (stackImgEl) {
-        setBadgeSrc(stackImgEl, stackURL);
-      }
+      updateNamedBadges(data.collected_at);
       const nodes = data.nodes || [];
       if (nodes.length === 0) {
         if (fleetEl) {

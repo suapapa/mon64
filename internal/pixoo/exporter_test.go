@@ -7,11 +7,14 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/suapapa/mon64/internal/config"
 	"github.com/suapapa/mon64/internal/domain"
+	"github.com/suapapa/mon64/internal/exporter"
 )
 
 type fakeSource struct {
 	snapshot domain.Snapshot
+	badges   map[string]config.BadgeConfig
 }
 
 func (f *fakeSource) Snapshot() domain.Snapshot {
@@ -20,6 +23,11 @@ func (f *fakeSource) Snapshot() domain.Snapshot {
 
 func (f *fakeSource) Subscribe() (<-chan struct{}, func()) {
 	return make(chan struct{}), func() {}
+}
+
+func (f *fakeSource) BadgeByName(name string) (config.BadgeConfig, bool) {
+	b, ok := f.badges[name]
+	return b, ok
 }
 
 type fakeClient struct {
@@ -41,15 +49,19 @@ func (f *fakeClient) SendAnimationImgs(id int, speeds []int, images []image.Imag
 	return nil
 }
 
-func TestBadgeFramePadsShortStack(t *testing.T) {
+func TestFitDisplayPadsShortBadge(t *testing.T) {
 	nodes := []domain.NodeState{{
 		Name:      "spark",
 		Reachable: true,
 		Collects:  []string{"cpu"},
 		CPU:       domain.Ptr(42),
 	}}
+	img, err := exporter.BadgeImage(config.BadgeTypeRect64, nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	frame := badgeFrame(nodes)
+	frame := fitDisplay(img)
 	if got := frame.Bounds().Size(); got != (image.Pt(64, 64)) {
 		t.Fatalf("frame size = %v, want 64x64", got)
 	}
@@ -58,7 +70,7 @@ func TestBadgeFramePadsShortStack(t *testing.T) {
 	}
 }
 
-func TestBadgeFrameFitsTallStack(t *testing.T) {
+func TestFitDisplayFitsTallBadge(t *testing.T) {
 	nodes := make([]domain.NodeState, 4)
 	for i := range nodes {
 		nodes[i] = domain.NodeState{
@@ -71,8 +83,12 @@ func TestBadgeFrameFitsTallStack(t *testing.T) {
 			SwapUsed:  domain.Ptr(42),
 		}
 	}
+	img, err := exporter.BadgeImage(config.BadgeTypeRect64, nodes)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	frame := badgeFrame(nodes)
+	frame := fitDisplay(img)
 	if got := frame.Bounds().Size(); got != (image.Pt(64, 64)) {
 		t.Fatalf("frame size = %v, want 64x64", got)
 	}
@@ -82,15 +98,29 @@ func TestBadgeFrameFitsTallStack(t *testing.T) {
 }
 
 func TestExporterSend(t *testing.T) {
-	source := &fakeSource{snapshot: domain.Snapshot{Nodes: []domain.NodeState{{
-		Name:      "spark",
-		Reachable: true,
-		Collects:  []string{"cpu"},
-		CPU:       domain.Ptr(42),
-	}}}}
+	source := &fakeSource{
+		snapshot: domain.Snapshot{Nodes: []domain.NodeState{{
+			Name:      "spark",
+			Reachable: true,
+			Collects:  []string{"cpu"},
+			CPU:       domain.Ptr(42),
+		}}},
+		badges: map[string]config.BadgeConfig{
+			"homelab": {
+				Name:  "homelab",
+				Type:  config.BadgeTypeRect64,
+				Nodes: []string{"spark"},
+			},
+		},
+	}
 	client := &fakeClient{}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	pixooExporter := &Exporter{source: source, client: client, log: log}
+	pixooExporter := &Exporter{
+		source:     source,
+		client:     client,
+		log:        log,
+		badgeNames: []string{"homelab"},
+	}
 
 	pixooExporter.send()
 	pixooExporter.send()

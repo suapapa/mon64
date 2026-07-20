@@ -21,6 +21,7 @@ type Store struct {
 	snap     domain.Snapshot
 	engine   *collector.Engine
 	nodes    []config.NodeConfig
+	badges   []config.BadgeConfig
 	interval time.Duration
 	dummy    bool
 	reloadCh chan struct{}
@@ -51,6 +52,7 @@ func newStore(cfg *config.Config, dummy bool) *Store {
 	return &Store{
 		engine:   collector.NewEngine(cfg.ScrapeTimeout),
 		nodes:    append([]config.NodeConfig(nil), cfg.Nodes...),
+		badges:   append([]config.BadgeConfig(nil), cfg.Badges...),
 		interval: cfg.ScrapeInterval,
 		dummy:    dummy,
 		reloadCh: make(chan struct{}, 1),
@@ -72,6 +74,7 @@ func (s *Store) Reload(cfg *config.Config) error {
 	}
 	s.mu.Lock()
 	s.nodes = append([]config.NodeConfig(nil), cfg.Nodes...)
+	s.badges = append([]config.BadgeConfig(nil), cfg.Badges...)
 	s.interval = cfg.ScrapeInterval
 	s.engine.SetScrapeTimeout(cfg.ScrapeTimeout)
 	s.syncSnapshotNodesLocked(cfg.Nodes)
@@ -295,6 +298,27 @@ func (s *Store) NodeByName(name string) (domain.NodeState, bool) {
 		}
 	}
 	return domain.NodeState{}, false
+}
+
+// Badges returns a copy of configured named badges.
+func (s *Store) Badges() []config.BadgeConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]config.BadgeConfig, len(s.badges))
+	copy(out, s.badges)
+	return out
+}
+
+// BadgeByName returns one badge config or false if unknown.
+func (s *Store) BadgeByName(name string) (config.BadgeConfig, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, b := range s.badges {
+		if b.Name == name {
+			return b, true
+		}
+	}
+	return config.BadgeConfig{}, false
 }
 
 // SetSnapshotForTest injects snapshot data in tests.

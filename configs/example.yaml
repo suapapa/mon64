@@ -2,6 +2,20 @@ listen: ":8080"
 scrape_interval: 15s   # default per-node interval; override with nodes[].scrape_interval
 scrape_timeout: 5s
 
+exports:
+  pixoo64:
+    - badge: homelab
+
+badges:
+  - name: homelab
+    type: rect64
+    nodes:
+      - spark
+      - vraptor
+      - omv
+    exports:
+      - pixoo64
+
 nodes:
   - name: spark
     prom_fmt: nv-monitor
@@ -11,7 +25,6 @@ nodes:
       - cpu
       - gpu
       - mem
-      - swap
 
   - name: vraptor
     prom_fmt: node-exporter

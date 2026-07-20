@@ -37,20 +37,10 @@ var (
 	loadRed    = color.RGBA{R: 0xff, G: 0x44, B: 0x44, A: 0xff}
 )
 
-// BadgePNG renders a 64×H status badge for one node.
-// Font: Tom Thumb (ref/tom-thumb.bdf) at 1×; web UI displays at 2× (128×2H).
-func BadgePNG(node domain.NodeState) ([]byte, error) {
-	return encodePNG(badgeImage(node))
-}
-
-// BadgeStackPNG renders all node badges vertically with black separators.
-func BadgeStackPNG(nodes []domain.NodeState) ([]byte, error) {
-	return encodePNG(BadgeStackImage(nodes))
-}
-
-// BadgeStackImage renders all node badges vertically with black separators.
-func BadgeStackImage(nodes []domain.NodeState) image.Image {
-	height := badgeStackHeight(nodes)
+// rect64Image stacks per-node tiles vertically with black separators.
+// Meter (cpu/mem/…) drawing lives under this badge type only.
+func rect64Image(nodes []domain.NodeState) image.Image {
+	height := rect64Height(nodes)
 	if height == 0 {
 		height = 1
 	}
@@ -59,17 +49,28 @@ func BadgeStackImage(nodes []domain.NodeState) image.Image {
 
 	y := 0
 	for _, node := range nodes {
-		badge := badgeImage(node)
-		target := image.Rect(0, y, badgeWidth, y+badge.Bounds().Dy())
-		draw.Draw(stack, target, badge, image.Point{}, draw.Src)
+		tile := nodeTileImage(node)
+		target := image.Rect(0, y, badgeWidth, y+tile.Bounds().Dy())
+		draw.Draw(stack, target, tile, image.Point{}, draw.Src)
 		y = target.Max.Y + badgeStackGap
 	}
 
 	return stack
 }
 
-func badgeImage(node domain.NodeState) *image.RGBA {
-	h := badgeHeight(node)
+func rect64Height(nodes []domain.NodeState) int {
+	if len(nodes) == 0 {
+		return 0
+	}
+	height := (len(nodes) - 1) * badgeStackGap
+	for _, node := range nodes {
+		height += nodeTileHeight(node)
+	}
+	return height
+}
+
+func nodeTileImage(node domain.NodeState) *image.RGBA {
+	h := nodeTileHeight(node)
 	img := image.NewRGBA(image.Rect(0, 0, badgeWidth, h))
 	draw.Draw(img, img.Bounds(), &image.Uniform{C: bgColor}, image.Point{}, draw.Src)
 
@@ -110,7 +111,7 @@ func encodePNG(img image.Image) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func badgeHeight(node domain.NodeState) int {
+func nodeTileHeight(node domain.NodeState) int {
 	lh := badgeFont.lineHeight(badgeFontScale)
 	h := lh + badgeNameGap
 	if !node.Reachable {
@@ -137,17 +138,6 @@ func meterCount(node domain.NodeState) int {
 // meterStride is the vertical advance per meter row (bar is lh-1 tall).
 func meterStride(lh int) int {
 	return lh - 1 + badgeMeterGap
-}
-
-func badgeStackHeight(nodes []domain.NodeState) int {
-	if len(nodes) == 0 {
-		return 0
-	}
-	height := (len(nodes) - 1) * badgeStackGap
-	for _, node := range nodes {
-		height += badgeHeight(node)
-	}
-	return height
 }
 
 func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
@@ -248,18 +238,4 @@ func truncateToWidth(s string, maxPx int) string {
 		}
 	}
 	return ellipsis
-}
-
-// BadgeSize returns the PNG pixel size for a node badge.
-func BadgeSize(node domain.NodeState) (w, h int) {
-	return badgeWidth, badgeHeight(node)
-}
-
-// BadgeStackSize returns the PNG pixel size for a stacked badge.
-func BadgeStackSize(nodes []domain.NodeState) (w, h int) {
-	height := badgeStackHeight(nodes)
-	if height == 0 {
-		height = 1
-	}
-	return badgeWidth, height
 }

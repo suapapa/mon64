@@ -64,6 +64,10 @@ components:
     backgroundColor: "{colors.badge-frame}"
     rounded: "{rounded.md}"
     padding: "0.5rem"
+  named-badge:
+    backgroundColor: "{colors.badge-frame}"
+    rounded: "{rounded.md}"
+    padding: "0.5rem"
   link:
     textColor: "{colors.accent}"
   link-hover:
@@ -86,7 +90,7 @@ components:
 
 mon64 is an ops status wall, not a marketing site. The UI frames the real artifact — Tom Thumb pixel PNG badges from `internal/exporter` — the way a dim rack room frames instrument lights. Chrome stays quiet; the badges and load numbers carry the signal.
 
-The palette is cool indigo locked to badge PNG colors (`#1a1a2e` surface, blue→green→orange→red load stops). Motion only reports connection and refresh state. Density is intentional: one masthead, one stacked badge, one fleet list.
+The palette is cool indigo locked to badge PNG colors (`#1a1a2e` surface, blue→green→orange→red load stops). Motion only reports connection and refresh state. Density is intentional: one masthead, configured named badges, one fleet list.
 
 **Key Characteristics:**
 - Dark-only (`color-scheme: dark`); matches badge PNGs
