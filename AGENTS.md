@@ -12,6 +12,7 @@ This document orients automated agents (and humans) working on the **mon64** rep
 - Named PNG badges (`GET /api/v1/badge/{badge_name}`)
 - Health check (`GET /healthz`)
 - Self-metrics (`GET /metrics`)
+- Optional per-port Prometheus node exports (`exports.prometheuses`)
 
 Requirements source of truth: `doc/PLAN.md`. Metric fixtures: `ref/*.metrics`.
 
@@ -38,6 +39,7 @@ internal/collector/   Scraper, node-exporter & nv-monitor collectors
 internal/store/       Scheduler + in-memory snapshot
 internal/exporter/    JSON, YAML, PNG badge renderers (rect64, …)
 internal/pixoo/       Pixoo64 export (config-driven)
+internal/promexport/  Dedicated-port Prometheus node exporters
 internal/metrics/     Self-metrics registry + /metrics exposition
 internal/server/      Gin HTTP routes + middleware
 web/                  Embedded dashboard (index.html, static/)
@@ -54,9 +56,9 @@ doc/                  PLAN, REFERENCE
 4. **Scrape model**: Background goroutine collects on startup + interval; HTTP handlers read store only.
 5. **Failure isolation**: Per-node errors set `reachable: false` + `last_error`; other nodes and the server continue.
 6. **Badge types**: Named badges from config (`badges[]`). Implemented: `rect64` (64×H stacked node tiles with cpu/mem meters), `circle240` (240×240 single-node CPU/MEM gauge). Reserved: `circle128`. Meter rendering is internal to the badge type (not HTTP endpoints).
-7. **Exports**: `exports.pixoo64` auto-starts the Pixoo64 exporter (no CLI flag). Badge↔export lists must agree.
+7. **Exports**: `exports.pixoo64` auto-starts the Pixoo64 exporter (no CLI flag). Badge↔export lists must agree. `exports.prometheuses` starts dedicated `GET /metrics` listeners that expose normalized node gauges for the listed nodes only.
 8. **Badge fonts**: Tom Thumb BDF (`ref/tom-thumb.bdf`) for `rect64`; SUIT Heavy TTF for `circle240`. Both embedded in `internal/exporter`.
-9. **Config hot-reload**: `internal/config/watcher.go` + `SIGHUP`; `listen` and export enablement need process restart.
+9. **Config hot-reload**: `internal/config/watcher.go` + `SIGHUP`; `listen` and export enablement/ports need process restart.
 10. **HTTP**: Gin router; handlers read store snapshot only.
 
 ## Commands
@@ -76,7 +78,7 @@ go run ./cmd/mon64 -config configs/example.yaml
 
 ## Configuration reference
 
-See `configs/example.yaml`. Valid `prom_fmt`: `node-exporter`, `nv-monitor`. Valid `collects`: `cpu`, `gpu`, `mem`, `swap`. GPU is invalid for `node-exporter`. Valid `badges[].type`: `rect64`, `circle240` (`circle240` requires exactly one node). `exports.pixoo64[].badge` must reference a badge that lists `pixoo64` under `badges[].exports`.
+See `configs/example.yaml`. Valid `prom_fmt`: `node-exporter`, `nv-monitor`. Valid `collects`: `cpu`, `gpu`, `mem`, `swap`. GPU is invalid for `node-exporter`. Valid `badges[].type`: `rect64`, `circle240` (`circle240` requires exactly one node). `exports.pixoo64[].badge` must reference a badge that lists `pixoo64` under `badges[].exports`. `exports.prometheuses[].port` is a TCP port (`"9100"` or `":9100"`); ports must be unique; `nodes` must name configured nodes.
 
 ## Testing conventions
 

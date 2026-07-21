@@ -30,6 +30,10 @@ LAN and pushes the referenced named badge(s) after snapshot changes. Stacks
 taller than 64 pixels are scaled to fit the 64×64 display. Adding or removing
 Pixoo exports requires a process restart.
 
+When `exports.prometheuses` is set, mon64 also listens on each configured port
+and serves normalized node metrics at `GET /metrics` (listed nodes only). Port
+or enablement changes require a process restart.
+
 ## Configuration
 
 See `configs/example.yaml`. Key fields:
@@ -45,6 +49,8 @@ See `configs/example.yaml`. Key fields:
 | `badges[].type` | Badge renderer (`rect64`, `circle240`; `circle128` reserved) |
 | `badges[].nodes` | Node names included in the named badge (order preserved) |
 | `exports.pixoo64[].badge` | Named badge to push to a discovered Pixoo64 |
+| `exports.prometheuses[].port` | Extra listen port for a node-metrics Prometheus exporter |
+| `exports.prometheuses[].nodes` | Node names included on that exporter (order preserved) |
 
 ## HTTP endpoints
 
@@ -56,6 +62,7 @@ See `configs/example.yaml`. Key fields:
 | `GET /api/v1/badge/{badge}` | Named composite badge PNG (optional `.png` suffix) |
 | `GET /healthz` | Liveness probe |
 | `GET /metrics` | mon64 self-metrics (Prometheus text) |
+| `GET /metrics` on `exports.prometheuses` ports | Normalized node gauges for listed nodes |
 
 API responses use the in-memory snapshot from the last scheduled scrape, not live remote calls.
 
@@ -77,9 +84,14 @@ API responses use the in-memory snapshot from the last scheduled scrape, not liv
 
 Unset or uncollectable fields are omitted (null), never coerced to zero.
 
-## Badge font
+## Badge fonts
 
-Badges use **[Tom Thumb](https://robey.lag.net/2010/01/23/tiny-monospace-font.html)** (4×6 monospace by Robey Pointer), from `ref/tom-thumb.bdf`. The same file is embedded in `internal/exporter`; the dashboard uses pixel-perfect CSS scaling for legibility.
+Both fonts are embedded in `internal/exporter`.
+
+| Badge type | Font | Notes |
+|------------|------|-------|
+| `rect64` | **[Tom Thumb](https://robey.lag.net/2010/01/23/tiny-monospace-font.html)** (`tom-thumb.bdf`) | 4×6 monospace by Robey Pointer. |
+| `circle240` | **SUIT Heavy** (`SUIT-Heavy.ttf`) | By SUNN YOUN ([sun-typeface](https://github.com/sun-typeface)); SIL Open Font License (OFL-1.1). |
 
 ## Docker
 
@@ -94,6 +106,7 @@ docker run --rm -p 8080:8080 -v $(pwd)/configs/example.yaml:/config.yaml mon64 -
 - **Request logging**: Gin middleware logs method, route, status, duration
 - **Config hot-reload**: `fsnotify` watches the config file; `SIGHUP` also triggers reload. `listen` changes require restart.
 - **Self-metrics**: `GET /metrics` exposes scrape and HTTP counters
+- **Prometheus node exports**: `exports.prometheuses` exposes `mon64_node_*` gauges per listed node on dedicated ports
 
 ## Development
 

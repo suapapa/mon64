@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -40,14 +42,21 @@ type Config struct {
 	Nodes          []NodeConfig  `yaml:"nodes"`
 }
 
-// ExportsConfig binds named badges to external display targets.
+// ExportsConfig binds named badges and Prometheus listeners to targets.
 type ExportsConfig struct {
-	Pixoo64 []Pixoo64Export `yaml:"pixoo64"`
+	Pixoo64      []Pixoo64Export    `yaml:"pixoo64"`
+	Prometheuses []PrometheusExport `yaml:"prometheuses"`
 }
 
 // Pixoo64Export pushes one named badge to a discovered Pixoo64.
 type Pixoo64Export struct {
 	Badge string `yaml:"badge"`
+}
+
+// PrometheusExport serves normalized node metrics on a dedicated port.
+type PrometheusExport struct {
+	Port  string   `yaml:"port"`
+	Nodes []string `yaml:"nodes"`
 }
 
 // BadgeConfig describes a named composite badge.
@@ -253,7 +262,56 @@ func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
 		}
 	}
 
+	return c.validatePrometheusExports(nodeNames)
+}
+
+func (c *Config) validatePrometheusExports(nodeNames map[string]struct{}) error {
+	seenPorts := make(map[string]struct{}, len(c.Exports.Prometheuses))
+	for i, exp := range c.Exports.Prometheuses {
+		addr, err := NormalizeListenPort(exp.Port)
+		if err != nil {
+			return fmt.Errorf("exports.prometheuses[%d].port: %w", i, err)
+		}
+		if _, dup := seenPorts[addr]; dup {
+			return fmt.Errorf("exports.prometheuses[%d]: duplicate port %q", i, addr)
+		}
+		seenPorts[addr] = struct{}{}
+		c.Exports.Prometheuses[i].Port = addr
+
+		if len(exp.Nodes) == 0 {
+			return fmt.Errorf("exports.prometheuses[%d]: nodes must not be empty", i)
+		}
+		seenNodes := make(map[string]struct{}, len(exp.Nodes))
+		for j, nodeName := range exp.Nodes {
+			if nodeName == "" {
+				return fmt.Errorf("exports.prometheuses[%d].nodes[%d]: name is required", i, j)
+			}
+			if _, ok := nodeNames[nodeName]; !ok {
+				return fmt.Errorf("exports.prometheuses[%d].nodes[%d]: unknown node %q", i, j, nodeName)
+			}
+			if _, dup := seenNodes[nodeName]; dup {
+				return fmt.Errorf("exports.prometheuses[%d].nodes[%d]: duplicate node %q", i, j, nodeName)
+			}
+			seenNodes[nodeName] = struct{}{}
+		}
+	}
 	return nil
+}
+
+// NormalizeListenPort accepts "9100" or ":9100" and returns ":9100".
+func NormalizeListenPort(port string) (string, error) {
+	port = strings.TrimSpace(port)
+	if port == "" {
+		return "", fmt.Errorf("is required")
+	}
+	if !strings.HasPrefix(port, ":") {
+		port = ":" + port
+	}
+	n, err := strconv.Atoi(port[1:])
+	if err != nil || n < 1 || n > 65535 {
+		return "", fmt.Errorf("%q is not a valid TCP port", port)
+	}
+	return port, nil
 }
 
 // EffectiveScrapeInterval returns the node interval or the global default.

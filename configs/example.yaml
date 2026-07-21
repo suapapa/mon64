@@ -5,6 +5,13 @@ scrape_timeout: 5s
 exports:
   pixoo64:
     - badge: homin-lan
+  prometheuses:
+    - port: "9100"
+      nodes:
+        - spark
+    - port: "9101"
+      nodes:
+        - omv
 
 badges:
   - name: homin-lan

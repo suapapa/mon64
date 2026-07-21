@@ -241,9 +241,20 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 ---
 
+## T024 — Prometheus node exports
+
+**Status:** done
+
+- [x] Parse/validate `exports.prometheuses` (port + nodes)
+- [x] Dedicated listeners serving normalized `mon64_node_*` gauges at `GET /metrics`
+- [x] Filter to listed nodes; omit nil percent fields
+- [x] Wire from `cmd/mon64`; document restart requirement for port changes
+
+---
+
 ## Dependency graph
 
 ```
 T001 → T002,T003 → T004,T005 → T006,T007 → T008 → T009 → T010,T011 → T012,T013 → T014 → T015 → T016
-T017–T020,T022–T023 independent optional follow-ups
+T017–T020,T022–T024 independent optional follow-ups
 ```

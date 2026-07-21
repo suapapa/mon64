@@ -48,6 +48,18 @@ func TestLoadExampleConfig(t *testing.T) {
 	if len(cfg.Exports.Pixoo64) != 1 || cfg.Exports.Pixoo64[0].Badge != "homin-lan" {
 		t.Fatalf("exports.pixoo64 = %#v", cfg.Exports.Pixoo64)
 	}
+	if len(cfg.Exports.Prometheuses) != 2 {
+		t.Fatalf("exports.prometheuses = %#v", cfg.Exports.Prometheuses)
+	}
+	if cfg.Exports.Prometheuses[0].Port != ":9100" ||
+		len(cfg.Exports.Prometheuses[0].Nodes) != 1 ||
+		cfg.Exports.Prometheuses[0].Nodes[0] != "spark" {
+		t.Fatalf("prometheuses[0] = %#v", cfg.Exports.Prometheuses[0])
+	}
+	if cfg.Exports.Prometheuses[1].Port != ":9101" ||
+		cfg.Exports.Prometheuses[1].Nodes[0] != "omv" {
+		t.Fatalf("prometheuses[1] = %#v", cfg.Exports.Prometheuses[1])
+	}
 }
 
 func TestLoadDummyOnlyRequiresNodeNameAndCollects(t *testing.T) {
@@ -91,6 +103,10 @@ func TestValidateErrors(t *testing.T) {
 		{"circle240 needs one node", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\n  - name: y\n    prom_fmt: node-exporter\n    prom_endpoint: http://y\n    collects: [cpu]\nbadges:\n  - name: b\n    type: circle240\n    nodes: [x, y]\n"},
 		{"badge unknown node", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [missing]\n"},
 		{"export badge mismatch", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [x]\nexports:\n  pixoo64:\n    - badge: b\n"},
+		{"prometheus unknown node", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nexports:\n  prometheuses:\n    - port: \"9100\"\n      nodes: [missing]\n"},
+		{"prometheus duplicate port", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nexports:\n  prometheuses:\n    - port: \"9100\"\n      nodes: [x]\n    - port: \":9100\"\n      nodes: [x]\n"},
+		{"prometheus empty nodes", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nexports:\n  prometheuses:\n    - port: \"9100\"\n      nodes: []\n"},
+		{"prometheus bad port", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nexports:\n  prometheuses:\n    - port: \"abc\"\n      nodes: [x]\n"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
