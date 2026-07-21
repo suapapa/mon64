@@ -10,6 +10,12 @@ import (
 //go:embed tom-thumb.bdf
 var tomThumbBDF []byte
 
+// SUIT Heavy — used by circle240 OpenType text.
+// https://github.com/sunflower-lab/SUIT
+//
+//go:embed SUIT-Heavy.ttf
+var suitHeavyTTF []byte
+
 // badgeFontScale draws 4×6 Tom Thumb glyphs 1:1 on the 64×H badge
 // (web UI enlarges the PNG 2× for display).
 const badgeFontScale = 1

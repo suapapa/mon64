@@ -27,7 +27,7 @@
       <ul class="badge-list">
         {{ range .Badges }}
         <li>
-          <a class="named-badge" data-badge="{{ .Name }}" href="/api/v1/badge/{{ .Name }}?t={{ $.CollectedAt.UnixMilli }}" title="Open {{ .Name }} badge PNG">
+          <a class="named-badge" data-badge="{{ .Name }}" data-type="{{ .Type }}" href="/api/v1/badge/{{ .Name }}?t={{ $.CollectedAt.UnixMilli }}" title="Open {{ .Name }} badge PNG">
             <img src="/api/v1/badge/{{ .Name }}?t={{ $.CollectedAt.UnixMilli }}" alt="{{ .Name }} status badge">
           </a>
         </li>

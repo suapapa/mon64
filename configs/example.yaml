@@ -4,10 +4,10 @@ scrape_timeout: 5s
 
 exports:
   pixoo64:
-    - badge: homelab
+    - badge: homin-lan
 
 badges:
-  - name: homelab
+  - name: homin-lan
     type: rect64
     nodes:
       - spark
@@ -15,6 +15,10 @@ badges:
       - omv
     exports:
       - pixoo64
+  - name: homin-dev
+    type: circle240
+    nodes:
+      - omv
 
 nodes:
   - name: spark

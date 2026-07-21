@@ -15,6 +15,7 @@ const (
 	BadgeTypeRect64 = "rect64"
 	// BadgeTypeCircle128 is reserved; not implemented yet.
 	BadgeTypeCircle128 = "circle128"
+	BadgeTypeCircle240 = "circle240"
 
 	ExportPixoo64 = "pixoo64"
 )
@@ -173,7 +174,7 @@ func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
 		badgeNames[b.Name] = struct{}{}
 
 		switch b.Type {
-		case BadgeTypeRect64:
+		case BadgeTypeRect64, BadgeTypeCircle240:
 		case BadgeTypeCircle128:
 			return fmt.Errorf("badges[%d]: type %q is not implemented yet", i, b.Type)
 		case "":
@@ -184,6 +185,9 @@ func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
 
 		if len(b.Nodes) == 0 {
 			return fmt.Errorf("badges[%d]: nodes must not be empty", i)
+		}
+		if b.Type == BadgeTypeCircle240 && len(b.Nodes) != 1 {
+			return fmt.Errorf("badges[%d]: type %q requires exactly one node", i, b.Type)
 		}
 		seenNodes := make(map[string]struct{}, len(b.Nodes))
 		for j, nodeName := range b.Nodes {

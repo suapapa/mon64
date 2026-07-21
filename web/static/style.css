@@ -246,6 +246,11 @@ main {
   image-rendering: crisp-edges;
 }
 
+.named-badge[data-type="circle240"] img {
+  width: min(100%, 15rem);
+  image-rendering: auto;
+}
+
 /* —— Fleet rows —— */
 .fleet {
   margin-bottom: var(--space-4);

@@ -42,7 +42,7 @@ See `configs/example.yaml`. Key fields:
 | `nodes[].prom_fmt` | `node-exporter` or `nv-monitor` |
 | `nodes[].prom_api_key` | Optional bearer token; when set, sends `Authorization: Bearer {key}` |
 | `nodes[].collects` | Subset of `cpu`, `gpu`, `mem`, `swap` |
-| `badges[].type` | Badge renderer (`rect64` implemented; `circle128` reserved) |
+| `badges[].type` | Badge renderer (`rect64`, `circle240`; `circle128` reserved) |
 | `badges[].nodes` | Node names included in the named badge (order preserved) |
 | `exports.pixoo64[].badge` | Named badge to push to a discovered Pixoo64 |
 

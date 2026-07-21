@@ -53,9 +53,9 @@ doc/                  PLAN, REFERENCE
 3. **nv-monitor GPU**: Average of all `nv_gpu_utilization_percent` label values when multiple GPUs exist.
 4. **Scrape model**: Background goroutine collects on startup + interval; HTTP handlers read store only.
 5. **Failure isolation**: Per-node errors set `reachable: false` + `last_error`; other nodes and the server continue.
-6. **Badge types**: Named badges from config (`badges[]`). Implemented: `rect64` (64×H stacked node tiles with cpu/mem meters). Reserved: `circle128`. Meter rendering is internal to the badge type (not HTTP endpoints).
+6. **Badge types**: Named badges from config (`badges[]`). Implemented: `rect64` (64×H stacked node tiles with cpu/mem meters), `circle240` (240×240 single-node CPU/MEM gauge). Reserved: `circle128`. Meter rendering is internal to the badge type (not HTTP endpoints).
 7. **Exports**: `exports.pixoo64` auto-starts the Pixoo64 exporter (no CLI flag). Badge↔export lists must agree.
-8. **Badge font**: Tom Thumb BDF (`ref/tom-thumb.bdf`), embedded; dashboard CSS scales for legibility.
+8. **Badge fonts**: Tom Thumb BDF (`ref/tom-thumb.bdf`) for `rect64`; SUIT Heavy TTF for `circle240`. Both embedded in `internal/exporter`.
 9. **Config hot-reload**: `internal/config/watcher.go` + `SIGHUP`; `listen` and export enablement need process restart.
 10. **HTTP**: Gin router; handlers read store snapshot only.
 
@@ -76,7 +76,7 @@ go run ./cmd/mon64 -config configs/example.yaml
 
 ## Configuration reference
 
-See `configs/example.yaml`. Valid `prom_fmt`: `node-exporter`, `nv-monitor`. Valid `collects`: `cpu`, `gpu`, `mem`, `swap`. GPU is invalid for `node-exporter`. Valid `badges[].type`: `rect64` (implemented). `exports.pixoo64[].badge` must reference a badge that lists `pixoo64` under `badges[].exports`.
+See `configs/example.yaml`. Valid `prom_fmt`: `node-exporter`, `nv-monitor`. Valid `collects`: `cpu`, `gpu`, `mem`, `swap`. GPU is invalid for `node-exporter`. Valid `badges[].type`: `rect64`, `circle240` (`circle240` requires exactly one node). `exports.pixoo64[].badge` must reference a badge that lists `pixoo64` under `badges[].exports`.
 
 ## Testing conventions
 

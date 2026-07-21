@@ -22,6 +22,8 @@ func BadgeImage(badgeType string, nodes []domain.NodeState) (image.Image, error)
 	switch badgeType {
 	case config.BadgeTypeRect64:
 		return rect64Image(nodes), nil
+	case config.BadgeTypeCircle240:
+		return circle240Image(nodes)
 	case config.BadgeTypeCircle128:
 		return nil, fmt.Errorf("badge type %q is not implemented yet", badgeType)
 	default:
@@ -38,6 +40,8 @@ func BadgeSize(badgeType string, nodes []domain.NodeState) (w, h int, err error)
 			height = 1
 		}
 		return badgeWidth, height, nil
+	case config.BadgeTypeCircle240:
+		return circle240Size, circle240Size, nil
 	case config.BadgeTypeCircle128:
 		return 0, 0, fmt.Errorf("badge type %q is not implemented yet", badgeType)
 	default:

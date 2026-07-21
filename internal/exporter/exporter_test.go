@@ -244,3 +244,62 @@ func TestCircle128NotImplemented(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestCircle240BadgePNG(t *testing.T) {
+	cpu, mem := 42.0, 67.0
+	node := domain.NodeState{
+		Name:      "omv",
+		Reachable: true,
+		Collects:  []string{"cpu", "mem"},
+		CPU:       &cpu,
+		MemUsed:   &mem,
+	}
+	data, err := exporter.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{node})
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w, h, err := exporter.BadgeSize(config.BadgeTypeCircle240, []domain.NodeState{node})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w != 240 || h != 240 {
+		t.Fatalf("size = %dx%d, want 240x240", w, h)
+	}
+	b := img.Bounds()
+	if b.Dx() != w || b.Dy() != h {
+		t.Fatalf("png size = %dx%d, want %dx%d", b.Dx(), b.Dy(), w, h)
+	}
+}
+
+func TestCircle240Unreachable(t *testing.T) {
+	node := domain.NodeState{
+		Name:      "omv",
+		Reachable: false,
+		LastError: "timeout",
+	}
+	data, err := exporter.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{node})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) == 0 {
+		t.Fatal("empty png")
+	}
+}
+
+func TestCircle240Empty(t *testing.T) {
+	data, err := exporter.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := img.Bounds().Size(); got.X != 240 || got.Y != 240 {
+		t.Fatalf("empty size = %dx%d, want 240x240", got.X, got.Y)
+	}
+}
