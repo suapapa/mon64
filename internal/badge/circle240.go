@@ -1,4 +1,4 @@
-package exporter
+package badge
 
 import (
 	"fmt"
@@ -74,8 +74,8 @@ func renderCircle240(node domain.NodeState, fontData []byte) (image.Image, error
 		memVal, memOK = 0, false
 	}
 
-	cpuColor := c240GaugeColor(cpuVal)
-	memColor := c240GaugeColor(memVal)
+	cpuColor := levelColor(cpuVal)
+	memColor := levelColor(memVal)
 	if !cpuOK {
 		cpuColor = c240MutedColor
 	}
@@ -164,30 +164,6 @@ func formatPercent(v float64, ok bool) string {
 		return "n/a"
 	}
 	return fmt.Sprintf("%.0f%%", v)
-}
-
-func c240GaugeColor(percent float64) color.RGBA {
-	// 0%   -> Green (52, 199, 89)
-	// 50%  -> Orange (255, 149, 0)
-	// 100% -> Red (255, 59, 48)
-	var r, g, b float64
-	if percent <= 50 {
-		t := percent / 50.0
-		r = 52 + (255-52)*t
-		g = 199 + (149-199)*t
-		b = 89 + (0-89)*t
-	} else {
-		t := (percent - 50.0) / 50.0
-		r = 255
-		g = 149 + (59-149)*t
-		b = 0 + (48-0)*t
-	}
-	return color.RGBA{
-		R: uint8(math.Round(r)),
-		G: uint8(math.Round(g)),
-		B: uint8(math.Round(b)),
-		A: 255,
-	}
 }
 
 type c240GaugeSpec struct {

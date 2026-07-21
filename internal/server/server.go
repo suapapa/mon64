@@ -10,9 +10,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/suapapa/mon64/internal/badge"
 	"github.com/suapapa/mon64/internal/config"
 	"github.com/suapapa/mon64/internal/domain"
-	"github.com/suapapa/mon64/internal/exporter"
+	"github.com/suapapa/mon64/internal/export"
 	"github.com/suapapa/mon64/internal/metrics"
 	"github.com/suapapa/mon64/internal/store"
 	"github.com/suapapa/mon64/web"
@@ -109,7 +110,7 @@ func (s *Server) handleMetrics(c *gin.Context) {
 
 func (s *Server) handleNodesJSON(c *gin.Context) {
 	snap := s.store.Snapshot()
-	data, err := exporter.JSON(snap)
+	data, err := export.JSON(snap)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -119,7 +120,7 @@ func (s *Server) handleNodesJSON(c *gin.Context) {
 
 func (s *Server) handleNodesYAML(c *gin.Context) {
 	snap := s.store.Snapshot()
-	data, err := exporter.YAML(snap)
+	data, err := export.YAML(snap)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
@@ -133,13 +134,13 @@ func (s *Server) handleBadge(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	badge, ok := s.store.BadgeByName(name)
+	badgeCfg, ok := s.store.BadgeByName(name)
 	if !ok {
 		c.Status(http.StatusNotFound)
 		return
 	}
-	nodes := exporter.SelectBadgeNodes(badge, s.store.Snapshot())
-	data, err := exporter.BadgePNG(badge.Type, nodes)
+	nodes := badge.SelectBadgeNodes(badgeCfg, s.store.Snapshot())
+	data, err := badge.BadgePNG(badgeCfg.Type, nodes)
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return

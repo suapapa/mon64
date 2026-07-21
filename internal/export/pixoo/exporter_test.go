@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/suapapa/mon64/internal/badge"
 	"github.com/suapapa/mon64/internal/config"
 	"github.com/suapapa/mon64/internal/domain"
-	"github.com/suapapa/mon64/internal/exporter"
 )
 
 type fakeSource struct {
@@ -56,7 +56,7 @@ func TestFitDisplayPadsShortBadge(t *testing.T) {
 		Collects:  []string{"cpu"},
 		CPU:       domain.Ptr(42),
 	}}
-	img, err := exporter.BadgeImage(config.BadgeTypeRect64, nodes)
+	img, err := badge.BadgeImage(config.BadgeTypeRect64, nodes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestFitDisplayFitsTallBadge(t *testing.T) {
 			SwapUsed:  domain.Ptr(42),
 		}
 	}
-	img, err := exporter.BadgeImage(config.BadgeTypeRect64, nodes)
+	img, err := badge.BadgeImage(config.BadgeTypeRect64, nodes)
 	if err != nil {
 		t.Fatal(err)
 	}

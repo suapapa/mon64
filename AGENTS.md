@@ -37,9 +37,8 @@ internal/config/      YAML load + validation
 internal/domain/      Normalized NodeState / Snapshot
 internal/collector/   Scraper, node-exporter & nv-monitor collectors
 internal/store/       Scheduler + in-memory snapshot
-internal/exporter/    JSON, YAML, PNG badge renderers (rect64, …)
-internal/pixoo/       Pixoo64 export (config-driven)
-internal/promexport/  Dedicated-port Prometheus node exporters
+internal/badge/       PNG badge renderers (rect64, circle240, fonts)
+internal/export/      JSON/YAML serialization; pixoo & prometheus exporters
 internal/metrics/     Self-metrics registry + /metrics exposition
 internal/server/      Gin HTTP routes + middleware
 web/                  Embedded dashboard (index.html, static/)
@@ -57,7 +56,7 @@ doc/                  PLAN, REFERENCE
 5. **Failure isolation**: Per-node errors set `reachable: false` + `last_error`; other nodes and the server continue.
 6. **Badge types**: Named badges from config (`badges[]`). Implemented: `rect64` (64×H stacked node tiles with cpu/mem meters), `circle240` (240×240 single-node CPU/MEM gauge). Reserved: `circle128`. Meter rendering is internal to the badge type (not HTTP endpoints).
 7. **Exports**: `exports.pixoo64` auto-starts the Pixoo64 exporter (no CLI flag). Badge↔export lists must agree. `exports.prometheuses` starts dedicated `GET /metrics` listeners that expose normalized node gauges for the listed nodes only.
-8. **Badge fonts**: Tom Thumb BDF (`ref/tom-thumb.bdf`) for `rect64`; SUIT Heavy TTF for `circle240`. Both embedded in `internal/exporter`.
+8. **Badge fonts**: Tom Thumb BDF (`ref/tom-thumb.bdf`) for `rect64`; SUIT Heavy TTF for `circle240`. Both embedded in `internal/badge`. Load gauge colors are shared (`levelColor`: blue→green→orange→red).
 9. **Config hot-reload**: `internal/config/watcher.go` + `SIGHUP`; `listen` and export enablement/ports need process restart.
 10. **HTTP**: Gin router; handlers read store snapshot only.
 

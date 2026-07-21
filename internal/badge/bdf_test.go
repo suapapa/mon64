@@ -1,4 +1,4 @@
-package exporter
+package badge
 
 import (
 	"bytes"
@@ -39,6 +39,6 @@ func TestRefTomThumbMatchesEmbed(t *testing.T) {
 		t.Fatalf("read ref font: %v", err)
 	}
 	if !bytes.Equal(data, tomThumbBDF) {
-		t.Fatal("ref/tom-thumb.bdf differs from embedded internal/exporter/tom-thumb.bdf")
+		t.Fatal("ref/tom-thumb.bdf differs from embedded internal/badge/tom-thumb.bdf")
 	}
 }

@@ -86,7 +86,7 @@ Unset or uncollectable fields are omitted (null), never coerced to zero.
 
 ## Badge fonts
 
-Both fonts are embedded in `internal/exporter`.
+Both fonts are embedded in `internal/badge`.
 
 | Badge type | Font | Notes |
 |------------|------|-------|

@@ -11,9 +11,9 @@ import (
 	"time"
 
 	divoom "github.com/suapapa/go_divoom"
+	"github.com/suapapa/mon64/internal/badge"
 	"github.com/suapapa/mon64/internal/config"
 	"github.com/suapapa/mon64/internal/domain"
-	"github.com/suapapa/mon64/internal/exporter"
 )
 
 const (
@@ -119,13 +119,13 @@ func (e *Exporter) send() {
 	frames := make([]image.Image, 0, len(e.badgeNames))
 	speeds := make([]int, 0, len(e.badgeNames))
 	for _, name := range e.badgeNames {
-		badge, ok := e.source.BadgeByName(name)
+		badgeCfg, ok := e.source.BadgeByName(name)
 		if !ok {
 			e.log.Error("Pixoo64 export skipped missing badge", "badge", name)
 			continue
 		}
-		nodes := exporter.SelectBadgeNodes(badge, snapshot)
-		img, err := exporter.BadgeImage(badge.Type, nodes)
+		nodes := badge.SelectBadgeNodes(badgeCfg, snapshot)
+		img, err := badge.BadgeImage(badgeCfg.Type, nodes)
 		if err != nil {
 			e.log.Error("Pixoo64 export render failed", "badge", name, "err", err)
 			continue

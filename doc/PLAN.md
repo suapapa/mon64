@@ -42,7 +42,8 @@
 - `internal/domain/`
 - `internal/collector/`
 - `internal/store/`
-- `internal/exporter/`
+- `internal/badge/`
+- `internal/export/`
 - `internal/server/`
 - `web/`
 - `configs/`

@@ -1,6 +1,6 @@
-// Package promexport serves normalized node metrics as Prometheus text on
+// Package prometheus serves normalized node metrics as Prometheus text on
 // dedicated listen ports configured under exports.prometheuses.
-package promexport
+package prometheus
 
 import (
 	"context"
@@ -30,10 +30,10 @@ type Exporter struct {
 // New builds an exporter for the given Prometheus export configs.
 func New(source snapshotSource, cfgs []config.PrometheusExport, log *slog.Logger) (*Exporter, error) {
 	if source == nil {
-		return nil, fmt.Errorf("promexport: snapshot source is required")
+		return nil, fmt.Errorf("prometheus: snapshot source is required")
 	}
 	if len(cfgs) == 0 {
-		return nil, fmt.Errorf("promexport: at least one export is required")
+		return nil, fmt.Errorf("prometheus: at least one export is required")
 	}
 	if log == nil {
 		log = slog.Default()
@@ -42,7 +42,7 @@ func New(source snapshotSource, cfgs []config.PrometheusExport, log *slog.Logger
 	for i, c := range cfgs {
 		addr, err := config.NormalizeListenPort(c.Port)
 		if err != nil {
-			return nil, fmt.Errorf("promexport: exports[%d].port: %w", i, err)
+			return nil, fmt.Errorf("prometheus: exports[%d].port: %w", i, err)
 		}
 		nodes := append([]string(nil), c.Nodes...)
 		copied[i] = config.PrometheusExport{Port: addr, Nodes: nodes}

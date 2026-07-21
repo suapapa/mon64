@@ -99,7 +99,7 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 **Status:** done
 
-- [x] `internal/exporter/serialize.go`
+- [x] `internal/export/serialize.go`
 - [x] Unit tests
 
 ---
@@ -168,8 +168,8 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 **Status:** done
 
-- [x] Parse/load `ref/tom-thumb.bdf` (embedded in `internal/exporter`)
-- [x] Replace `basicfont` in `internal/exporter/png.go`
+- [x] Parse/load `ref/tom-thumb.bdf` (embedded in `internal/badge`)
+- [x] Replace `basicfont` in `internal/badge/rect64.go`
 - [x] Keep embed in sync with `ref/tom-thumb.bdf` (test)
 - Source: https://robey.lag.net/2010/01/23/tiny-monospace-font.html
 

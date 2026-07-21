@@ -88,7 +88,7 @@ components:
 
 **Creative North Star: "The Rack Panel"**
 
-mon64 is an ops status wall, not a marketing site. The UI frames the real artifact — Tom Thumb pixel PNG badges from `internal/exporter` — the way a dim rack room frames instrument lights. Chrome stays quiet; the badges and load numbers carry the signal.
+mon64 is an ops status wall, not a marketing site. The UI frames the real artifact — Tom Thumb pixel PNG badges from `internal/badge` — the way a dim rack room frames instrument lights. Chrome stays quiet; the badges and load numbers carry the signal.
 
 The palette is cool indigo locked to badge PNG colors (`#1a1a2e` surface, blue→green→orange→red load stops). Motion only reports connection and refresh state. Density is intentional: one masthead, configured named badges, one fleet list.
 
@@ -101,7 +101,7 @@ The palette is cool indigo locked to badge PNG colors (`#1a1a2e` surface, blue�
 
 ## Colors
 
-Cool indigo neutrals with a blue accent shared with badge `loadBlue`. Semantic load colors are the same stops as `internal/exporter/png.go`.
+Cool indigo neutrals with a blue accent shared with badge `loadBlue`. Semantic load colors are the same stops as `internal/badge/color.go`.
 
 ### Primary
 - **Signal Blue** (`#3388ff`): Links, focus ring sibling, low-load metric values; badge load stop at 0%
@@ -118,7 +118,7 @@ Cool indigo neutrals with a blue accent shared with badge `loadBlue`. Semantic l
 ### Named load / status
 - **Load Low** `#3388ff` · **Load Mid** `#44cc66` · **Load High** `#ffaa33` · **Load Crit / Error** `#ff4444`
 
-**The Badge Match Rule.** Dashboard surfaces and load colors must stay aligned with `internal/exporter` badge PNG colors. Do not invent a second “dashboard-only” accent green.
+**The Badge Match Rule.** Dashboard surfaces and load colors must stay aligned with `internal/badge` badge PNG colors. Do not invent a second “dashboard-only” accent green.
 
 **The One Accent Rule.** Interactive accent (`#3388ff`) is for links, selection, and focus — not large fills or hero washes.
 

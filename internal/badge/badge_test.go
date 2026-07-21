@@ -1,43 +1,15 @@
-package exporter_test
+package badge_test
 
 import (
 	"bytes"
 	"image/color"
 	"image/png"
 	"testing"
-	"time"
 
+	"github.com/suapapa/mon64/internal/badge"
 	"github.com/suapapa/mon64/internal/config"
 	"github.com/suapapa/mon64/internal/domain"
-	"github.com/suapapa/mon64/internal/exporter"
 )
-
-func TestJSONAndYAML(t *testing.T) {
-	cpu := 42.5
-	snap := domain.Snapshot{
-		CollectedAt: time.Now().UTC(),
-		Nodes: []domain.NodeState{{
-			Name:        "spark",
-			CollectedAt: time.Now().UTC(),
-			Reachable:   true,
-			CPU:         &cpu,
-		}},
-	}
-	j, err := exporter.JSON(snap)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Contains(j, []byte(`"cpu"`)) {
-		t.Fatalf("json missing cpu: %s", j)
-	}
-	y, err := exporter.YAML(snap)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Contains(y, []byte("cpu:")) {
-		t.Fatalf("yaml missing cpu: %s", y)
-	}
-}
 
 func TestRect64BadgePNGSize(t *testing.T) {
 	cpu, gpu := 10.0, 50.0
@@ -48,7 +20,7 @@ func TestRect64BadgePNGSize(t *testing.T) {
 		CPU:       &cpu,
 		GPU:       &gpu,
 	}
-	data, err := exporter.BadgePNG(config.BadgeTypeRect64, []domain.NodeState{two})
+	data, err := badge.BadgePNG(config.BadgeTypeRect64, []domain.NodeState{two})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +28,7 @@ func TestRect64BadgePNGSize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w, h, err := exporter.BadgeSize(config.BadgeTypeRect64, []domain.NodeState{two})
+	w, h, err := badge.BadgeSize(config.BadgeTypeRect64, []domain.NodeState{two})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +42,7 @@ func TestRect64BadgePNGSize(t *testing.T) {
 
 	four := two
 	four.Collects = []string{"cpu", "gpu", "mem", "swap"}
-	_, h4, err := exporter.BadgeSize(config.BadgeTypeRect64, []domain.NodeState{four})
+	_, h4, err := badge.BadgeSize(config.BadgeTypeRect64, []domain.NodeState{four})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +51,7 @@ func TestRect64BadgePNGSize(t *testing.T) {
 	}
 
 	down := domain.NodeState{Name: "down", Reachable: false, LastError: "timeout"}
-	_, hd, err := exporter.BadgeSize(config.BadgeTypeRect64, []domain.NodeState{down})
+	_, hd, err := badge.BadgeSize(config.BadgeTypeRect64, []domain.NodeState{down})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +70,7 @@ func TestRect64OmitsUncollected(t *testing.T) {
 		CPU:       &cpu,
 		GPU:       &gpu, // present but not in collects — must not be rendered
 	}
-	data, err := exporter.BadgePNG(config.BadgeTypeRect64, []domain.NodeState{node})
+	data, err := badge.BadgePNG(config.BadgeTypeRect64, []domain.NodeState{node})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +85,7 @@ func TestRect64Unreachable(t *testing.T) {
 		Reachable: false,
 		LastError: "connection refused",
 	}
-	data, err := exporter.BadgePNG(config.BadgeTypeRect64, []domain.NodeState{node})
+	data, err := badge.BadgePNG(config.BadgeTypeRect64, []domain.NodeState{node})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +109,7 @@ func TestRect64StackPNG(t *testing.T) {
 			LastError: "timeout",
 		},
 	}
-	data, err := exporter.BadgePNG(config.BadgeTypeRect64, nodes)
+	data, err := badge.BadgePNG(config.BadgeTypeRect64, nodes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +117,7 @@ func TestRect64StackPNG(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w, h, err := exporter.BadgeSize(config.BadgeTypeRect64, nodes)
+	w, h, err := badge.BadgeSize(config.BadgeTypeRect64, nodes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +125,7 @@ func TestRect64StackPNG(t *testing.T) {
 		t.Fatalf("size = %dx%d, want %dx%d", img.Bounds().Dx(), img.Bounds().Dy(), w, h)
 	}
 
-	_, firstHeight, err := exporter.BadgeSize(config.BadgeTypeRect64, nodes[:1])
+	_, firstHeight, err := badge.BadgeSize(config.BadgeTypeRect64, nodes[:1])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,14 +163,14 @@ func TestRect64Fits64(t *testing.T) {
 			MemUsed:   &v,
 		},
 	}
-	w, h, err := exporter.BadgeSize(config.BadgeTypeRect64, nodes)
+	w, h, err := badge.BadgeSize(config.BadgeTypeRect64, nodes)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if w != 64 || h != 64 {
 		t.Fatalf("stack size = %dx%d, want 64x64", w, h)
 	}
-	data, err := exporter.BadgePNG(config.BadgeTypeRect64, nodes)
+	data, err := badge.BadgePNG(config.BadgeTypeRect64, nodes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +184,7 @@ func TestRect64Fits64(t *testing.T) {
 }
 
 func TestRect64Empty(t *testing.T) {
-	data, err := exporter.BadgePNG(config.BadgeTypeRect64, []domain.NodeState{})
+	data, err := badge.BadgePNG(config.BadgeTypeRect64, []domain.NodeState{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,15 +203,15 @@ func TestSelectBadgeNodes(t *testing.T) {
 		{Name: "b"},
 		{Name: "c"},
 	}}
-	badge := config.BadgeConfig{Nodes: []string{"c", "a"}}
-	got := exporter.SelectBadgeNodes(badge, snap)
+	badgeCfg := config.BadgeConfig{Nodes: []string{"c", "a"}}
+	got := badge.SelectBadgeNodes(badgeCfg, snap)
 	if len(got) != 2 || got[0].Name != "c" || got[1].Name != "a" {
 		t.Fatalf("got %#v", got)
 	}
 }
 
 func TestCircle128NotImplemented(t *testing.T) {
-	_, err := exporter.BadgePNG(config.BadgeTypeCircle128, nil)
+	_, err := badge.BadgePNG(config.BadgeTypeCircle128, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -254,7 +226,7 @@ func TestCircle240BadgePNG(t *testing.T) {
 		CPU:       &cpu,
 		MemUsed:   &mem,
 	}
-	data, err := exporter.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{node})
+	data, err := badge.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{node})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +234,7 @@ func TestCircle240BadgePNG(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	w, h, err := exporter.BadgeSize(config.BadgeTypeCircle240, []domain.NodeState{node})
+	w, h, err := badge.BadgeSize(config.BadgeTypeCircle240, []domain.NodeState{node})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +253,7 @@ func TestCircle240Unreachable(t *testing.T) {
 		Reachable: false,
 		LastError: "timeout",
 	}
-	data, err := exporter.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{node})
+	data, err := badge.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{node})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +263,7 @@ func TestCircle240Unreachable(t *testing.T) {
 }
 
 func TestCircle240Empty(t *testing.T) {
-	data, err := exporter.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{})
+	data, err := badge.BadgePNG(config.BadgeTypeCircle240, []domain.NodeState{})
 	if err != nil {
 		t.Fatal(err)
 	}

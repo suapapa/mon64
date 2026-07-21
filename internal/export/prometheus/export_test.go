@@ -1,4 +1,4 @@
-package promexport_test
+package prometheus_test
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 
 	"github.com/suapapa/mon64/internal/config"
 	"github.com/suapapa/mon64/internal/domain"
-	"github.com/suapapa/mon64/internal/promexport"
+	"github.com/suapapa/mon64/internal/export/prometheus"
 )
 
 type snapSrc struct {
@@ -48,7 +48,7 @@ func TestWritePrometheusFiltersAndOmitsNil(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	promexport.WritePrometheus(&buf, snap, []string{"spark", "omv", "missing"})
+	prometheus.WritePrometheus(&buf, snap, []string{"spark", "omv", "missing"})
 	out := buf.String()
 
 	for _, want := range []string{
@@ -91,7 +91,7 @@ func TestExporterServesMetrics(t *testing.T) {
 			CPU:       domain.Ptr(9),
 		}},
 	}}
-	exp, err := promexport.New(src, []config.PrometheusExport{{
+	exp, err := prometheus.New(src, []config.PrometheusExport{{
 		Port:  ":" + strconv.Itoa(port),
 		Nodes: []string{"spark"},
 	}}, slog.Default())

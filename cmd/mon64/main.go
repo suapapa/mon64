@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/suapapa/mon64/internal/config"
+	"github.com/suapapa/mon64/internal/export/pixoo"
+	"github.com/suapapa/mon64/internal/export/prometheus"
 	"github.com/suapapa/mon64/internal/metrics"
-	"github.com/suapapa/mon64/internal/pixoo"
-	"github.com/suapapa/mon64/internal/promexport"
 	"github.com/suapapa/mon64/internal/server"
 	"github.com/suapapa/mon64/internal/store"
 )
@@ -65,7 +65,7 @@ func main() {
 
 	if len(cfg.Exports.Prometheuses) > 0 {
 		go func() {
-			promExporter, err := promexport.New(st, cfg.Exports.Prometheuses, log)
+			promExporter, err := prometheus.New(st, cfg.Exports.Prometheuses, log)
 			if err != nil {
 				log.Error("Prometheus exports disabled", "err", err)
 				return

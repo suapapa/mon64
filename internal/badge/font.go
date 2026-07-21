@@ -1,4 +1,4 @@
-package exporter
+package badge
 
 import (
 	_ "embed"
@@ -25,7 +25,7 @@ var badgeFont = mustParseBDF(tomThumbBDF)
 func mustParseBDF(data []byte) *bdfFont {
 	f, err := parseBDF(data)
 	if err != nil {
-		panic("exporter: parse tom-thumb.bdf: " + err.Error())
+		panic("badge: parse tom-thumb.bdf: " + err.Error())
 	}
 	return f
 }
