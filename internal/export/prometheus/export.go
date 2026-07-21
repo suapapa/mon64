@@ -56,7 +56,6 @@ func (e *Exporter) Run(ctx context.Context) {
 	servers := make([]*http.Server, 0, len(e.cfgs))
 
 	for _, cfg := range e.cfgs {
-		cfg := cfg
 		mux := http.NewServeMux()
 		mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")

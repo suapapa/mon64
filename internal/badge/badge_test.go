@@ -129,7 +129,7 @@ func TestRect64StackPNG(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for x := 0; x < w; x++ {
+	for x := range w {
 		if got := color.RGBAModel.Convert(img.At(x, firstHeight)).(color.RGBA); got != (color.RGBA{A: 0xff}) {
 			t.Fatalf("separator pixel (%d,%d) = %v, want black", x, firstHeight, got)
 		}

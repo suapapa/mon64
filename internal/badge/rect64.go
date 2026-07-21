@@ -146,10 +146,7 @@ func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
 	if barW > 0 {
 		drawRect(img, barX, y, barW, lh-1, barBG)
 		if val != nil {
-			fill := int(math.Round(float64(barW) * (*val / 100)))
-			if fill > barW {
-				fill = barW
-			}
+			fill := min(int(math.Round(float64(barW)*(*val/100))), barW)
 			if fill > 0 {
 				drawRect(img, barX, y, fill, lh-1, levelColor(*val))
 			}

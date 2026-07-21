@@ -30,7 +30,7 @@ func TestWritePrometheusFiltersAndOmitsNil(t *testing.T) {
 				Name:        "spark",
 				Reachable:   true,
 				CollectedAt: time.Unix(1_700_000_000, 0).UTC(),
-				CPU:         domain.Ptr(12.5),
+				CPU:         new(12.5),
 				GPU:         domain.Ptr(80),
 				MemUsed:     domain.Ptr(40),
 			},

@@ -210,10 +210,7 @@ func (f *bdfFont) drawString(dst *image.RGBA, x, y int, s string, c color.RGBA, 
 		}
 		adv := g.advance
 		if adv == 0 {
-			adv = g.width + g.xOff
-			if adv < 1 {
-				adv = 1
-			}
+			adv = max(g.width+g.xOff, 1)
 		}
 		penX += adv * scale
 	}

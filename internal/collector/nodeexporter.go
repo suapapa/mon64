@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"io"
+	"maps"
 	"sync"
 	"time"
 
@@ -94,7 +95,7 @@ func (c *NodeExporterCollector) cpuUsage(node string, metrics map[string]float64
 		return nil
 	}
 	usage := domain.ClampPercent(100 * (1 - idleDelta/totalDelta))
-	return domain.Ptr(usage)
+	return new(usage)
 }
 
 func memPercents(metrics map[string]float64) (*float64, *float64) {
@@ -105,10 +106,10 @@ func memPercents(metrics map[string]float64) (*float64, *float64) {
 	var used, cached *float64
 	if avail, ok := gaugeByName(metrics, "node_memory_MemAvailable_bytes"); ok {
 		u := domain.ClampPercent((total - avail) / total * 100)
-		used = domain.Ptr(u)
+		used = new(u)
 	}
 	if c, ok := gaugeByName(metrics, "node_memory_Cached_bytes"); ok {
-		cached = domain.Ptr(domain.ClampPercent(c / total * 100))
+		cached = new(domain.ClampPercent(c / total * 100))
 	}
 	return used, cached
 }
@@ -120,13 +121,11 @@ func swapUsed(metrics map[string]float64) *float64 {
 		return nil
 	}
 	u := domain.ClampPercent((total - free) / total * 100)
-	return domain.Ptr(u)
+	return new(u)
 }
 
 func cloneMap(in map[string]float64) map[string]float64 {
 	out := make(map[string]float64, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }

@@ -162,10 +162,7 @@ func fitDisplay(src image.Image) image.Image {
 	}
 
 	targetHeight := displaySize
-	targetWidth := srcBounds.Dx() * targetHeight / srcBounds.Dy()
-	if targetWidth < 1 {
-		targetWidth = 1
-	}
+	targetWidth := max(srcBounds.Dx()*targetHeight/srcBounds.Dy(), 1)
 	offsetX := (displaySize - targetWidth) / 2
 	for y := range targetHeight {
 		srcY := srcBounds.Min.Y + y*srcBounds.Dy()/targetHeight

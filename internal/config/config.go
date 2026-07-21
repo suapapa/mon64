@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -155,10 +156,8 @@ func (c *Config) validate(dummy bool) error {
 			return fmt.Errorf("nodes[%d]: prom_endpoint is required", i)
 		}
 		if n.PromFmt == PromFmtNodeExporter {
-			for _, k := range n.Collects {
-				if k == CollectGPU {
-					return fmt.Errorf("nodes[%d]: node-exporter does not support gpu collection", i)
-				}
+			if slices.Contains(n.Collects, CollectGPU) {
+				return fmt.Errorf("nodes[%d]: node-exporter does not support gpu collection", i)
 			}
 		}
 		interval := n.EffectiveScrapeInterval(c.ScrapeInterval)
@@ -324,12 +323,7 @@ func (n NodeConfig) EffectiveScrapeInterval(defaultInterval time.Duration) time.
 
 // Wants reports whether the node config requests kind.
 func (n NodeConfig) Wants(kind CollectKind) bool {
-	for _, k := range n.Collects {
-		if k == kind {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(n.Collects, kind)
 }
 
 // CollectStrings returns collects as plain strings for NodeState.

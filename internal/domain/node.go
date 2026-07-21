@@ -1,5 +1,7 @@
 package domain
 
+import "slices"
+
 import "time"
 
 // Snapshot is the canonical aggregate of all node states.
@@ -25,12 +27,7 @@ type NodeState struct {
 // Wants reports whether this node was configured to collect kind
 // (e.g. "cpu", "gpu", "mem", "swap").
 func (n NodeState) Wants(kind string) bool {
-	for _, k := range n.Collects {
-		if k == kind {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(n.Collects, kind)
 }
 
 // ClampPercent restricts v to [0, 100].
@@ -45,6 +42,8 @@ func ClampPercent(v float64) float64 {
 }
 
 // Ptr returns a pointer to v.
+//
+//go:fix inline
 func Ptr(v float64) *float64 {
-	return &v
+	return new(v)
 }

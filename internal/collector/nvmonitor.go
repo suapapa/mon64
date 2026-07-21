@@ -35,11 +35,11 @@ func (c *NvMonitorCollector) Collect(ctx context.Context, cfg config.NodeConfig,
 	}
 	if cfg.Wants(config.CollectCPU) {
 		if v, ok := gaugeByName(metrics, "nv_cpu_usage_percent"); ok {
-			state.CPU = domain.Ptr(domain.ClampPercent(v))
+			state.CPU = new(domain.ClampPercent(v))
 		} else {
 			for key, v := range labeledValues(metrics, "nv_cpu_usage_percent") {
 				if cpu, ok := labelValue(key, "cpu"); ok && cpu == "overall" {
-					state.CPU = domain.Ptr(domain.ClampPercent(v))
+					state.CPU = new(domain.ClampPercent(v))
 					break
 				}
 			}
@@ -53,17 +53,17 @@ func (c *NvMonitorCollector) Collect(ctx context.Context, cfg config.NodeConfig,
 				sum += v
 			}
 			avg := domain.ClampPercent(sum / float64(len(gpus)))
-			state.GPU = domain.Ptr(avg)
+			state.GPU = new(avg)
 		}
 	}
 	if cfg.Wants(config.CollectMem) {
 		total, okT := gaugeByName(metrics, "nv_memory_total_bytes")
 		if okT && total > 0 {
 			if used, ok := gaugeByName(metrics, "nv_memory_used_bytes"); ok {
-				state.MemUsed = domain.Ptr(domain.ClampPercent(used / total * 100))
+				state.MemUsed = new(domain.ClampPercent(used / total * 100))
 			}
 			if buf, ok := gaugeByName(metrics, "nv_memory_bufcache_bytes"); ok {
-				state.MemCached = domain.Ptr(domain.ClampPercent(buf / total * 100))
+				state.MemCached = new(domain.ClampPercent(buf / total * 100))
 			}
 		}
 	}
@@ -71,7 +71,7 @@ func (c *NvMonitorCollector) Collect(ctx context.Context, cfg config.NodeConfig,
 		total, okT := gaugeByName(metrics, "nv_swap_total_bytes")
 		used, okU := gaugeByName(metrics, "nv_swap_used_bytes")
 		if okT && okU && total > 0 {
-			state.SwapUsed = domain.Ptr(domain.ClampPercent(used / total * 100))
+			state.SwapUsed = new(domain.ClampPercent(used / total * 100))
 		}
 	}
 	return state

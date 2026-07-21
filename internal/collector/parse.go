@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -39,17 +40,18 @@ func metricKey(name string, m *dto.Metric) string {
 	if len(m.GetLabel()) == 0 {
 		return name
 	}
-	key := name + "{"
+	var key strings.Builder
+	key.WriteString(name + "{")
 	first := true
 	for _, lp := range m.GetLabel() {
 		if !first {
-			key += ","
+			key.WriteString(",")
 		}
 		first = false
-		key += lp.GetName() + "=\"" + lp.GetValue() + "\""
+		key.WriteString(lp.GetName() + "=\"" + lp.GetValue() + "\"")
 	}
-	key += "}"
-	return key
+	key.WriteString("}")
+	return key.String()
 }
 
 func sampleValue(m *dto.Metric) (float64, bool) {

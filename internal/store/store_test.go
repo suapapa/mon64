@@ -1,7 +1,6 @@
 package store_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -47,8 +46,7 @@ func TestReload(t *testing.T) {
 		t.Fatal("expected validation error")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	go st.Start(ctx)
 	time.Sleep(50 * time.Millisecond)
 	stats := st.ScrapeStats()
@@ -81,8 +79,7 @@ func TestSnapshotPreservesConfigOrder(t *testing.T) {
 		},
 	}
 	st := store.NewDummy(cfg)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	go st.Start(ctx)
 
 	deadline := time.Now().Add(time.Second)
@@ -135,8 +132,7 @@ func TestDummyStoreUsesRequestedMetricsWithoutScraping(t *testing.T) {
 		}},
 	}
 	st := store.NewDummy(cfg)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	go st.Start(ctx)
 
 	deadline := time.Now().Add(time.Second)
