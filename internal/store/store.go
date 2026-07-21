@@ -51,8 +51,8 @@ func NewDummy(cfg *config.Config) *Store {
 func newStore(cfg *config.Config, dummy bool) *Store {
 	return &Store{
 		engine:   collector.NewEngine(cfg.ScrapeTimeout),
-		nodes:    append([]config.NodeConfig(nil), cfg.Nodes...),
-		badges:   append([]config.BadgeConfig(nil), cfg.Badges...),
+		nodes:    append([]config.NodeConfig{}, cfg.Nodes...),
+		badges:   append([]config.BadgeConfig{}, cfg.Badges...),
 		interval: cfg.ScrapeInterval,
 		dummy:    dummy,
 		reloadCh: make(chan struct{}, 1),
@@ -63,18 +63,16 @@ func newStore(cfg *config.Config, dummy bool) *Store {
 // Reload applies a new configuration without restarting the process.
 // Listen address changes are ignored (requires restart).
 func (s *Store) Reload(cfg *config.Config) error {
-	var err error
+	validate := cfg.Validate
 	if s.dummy {
-		err = cfg.ValidateDummy()
-	} else {
-		err = cfg.Validate()
+		validate = cfg.ValidateDummy
 	}
-	if err != nil {
+	if err := validate(); err != nil {
 		return err
 	}
 	s.mu.Lock()
-	s.nodes = append([]config.NodeConfig(nil), cfg.Nodes...)
-	s.badges = append([]config.BadgeConfig(nil), cfg.Badges...)
+	s.nodes = append([]config.NodeConfig{}, cfg.Nodes...)
+	s.badges = append([]config.BadgeConfig{}, cfg.Badges...)
 	s.interval = cfg.ScrapeInterval
 	s.engine.SetScrapeTimeout(cfg.ScrapeTimeout)
 	s.syncSnapshotNodesLocked(cfg.Nodes)
@@ -146,7 +144,7 @@ func (s *Store) runWorkers(ctx context.Context) {
 	workerCtx, cancel := context.WithCancel(ctx)
 	s.mu.Lock()
 	s.workerCancel = cancel
-	nodes := append([]config.NodeConfig(nil), s.nodes...)
+	nodes := append([]config.NodeConfig{}, s.nodes...)
 	defaultInterval := s.interval
 	s.mu.Unlock()
 
@@ -220,7 +218,7 @@ func (s *Store) collectNodeState(ctx context.Context, node config.NodeConfig) do
 }
 
 func (s *Store) applyNodeStateLocked(state domain.NodeState) {
-	found := false
+	var found bool
 	for i, n := range s.snap.Nodes {
 		if n.Name == state.Name {
 			s.snap.Nodes[i] = state

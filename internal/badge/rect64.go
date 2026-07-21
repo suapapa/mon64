@@ -39,13 +39,25 @@ func rect64Image(nodes []domain.NodeState) image.Image {
 		height = 1
 	}
 	stack := image.NewRGBA(image.Rect(0, 0, badgeWidth, height))
-	draw.Draw(stack, stack.Bounds(), image.Black, image.Point{}, draw.Src)
+	draw.Draw(
+		stack,
+		stack.Bounds(),
+		image.Black,
+		image.Point{},
+		draw.Src,
+	)
 
-	y := 0
+	var y int
 	for _, node := range nodes {
 		tile := nodeTileImage(node)
 		target := image.Rect(0, y, badgeWidth, y+tile.Bounds().Dy())
-		draw.Draw(stack, target, tile, image.Point{}, draw.Src)
+		draw.Draw(
+			stack,
+			target,
+			tile,
+			image.Point{},
+			draw.Src,
+		)
 		y = target.Max.Y + badgeStackGap
 	}
 
@@ -66,34 +78,81 @@ func rect64Height(nodes []domain.NodeState) int {
 func nodeTileImage(node domain.NodeState) *image.RGBA {
 	h := nodeTileHeight(node)
 	img := image.NewRGBA(image.Rect(0, 0, badgeWidth, h))
-	draw.Draw(img, img.Bounds(), &image.Uniform{C: bgColor}, image.Point{}, draw.Src)
+	draw.Draw(
+		img,
+		img.Bounds(),
+		&image.Uniform{C: bgColor},
+		image.Point{},
+		draw.Src,
+	)
 
 	lh := badgeFont.lineHeight(badgeFontScale)
 	contentW := badgeWidth - 2*badgeSidePad
 	name := truncateToWidth(node.Name, contentW)
 	nameX := (badgeWidth - badgeFont.measure(name, badgeFontScale)) / 2
-	drawText(img, nameX, lh-badgeFont.descent*badgeFontScale, name, textColor)
+	drawText(
+		img,
+		nameX,
+		lh-badgeFont.descent*badgeFontScale,
+		name,
+		textColor,
+	)
 
 	y := lh + badgeNameGap
 	if !node.Reachable {
-		drawText(img, badgeSidePad, y+badgeFont.ascent*badgeFontScale, "UNREACHABLE", errorColor)
+		drawText(
+			img,
+			badgeSidePad,
+			y+badgeFont.ascent*badgeFontScale,
+			"UNREACHABLE",
+			errorColor,
+		)
 		y += lh + badgeUnreachGap
-		drawText(img, badgeSidePad, y+badgeFont.ascent*badgeFontScale, truncateToWidth(node.LastError, contentW), mutedColor)
-	} else {
-		if node.Wants("cpu") {
-			y = drawMeter(img, badgeSidePad, y, "CPU", node.CPU)
-		}
-		if node.Wants("gpu") {
-			y = drawMeter(img, badgeSidePad, y, "GPU", node.GPU)
-		}
-		if node.Wants("mem") {
-			y = drawMeter(img, badgeSidePad, y, "MEM", node.MemUsed)
-		}
-		if node.Wants("swap") {
-			y = drawMeter(img, badgeSidePad, y, "SWP", node.SwapUsed)
-		}
+		drawText(
+			img,
+			badgeSidePad,
+			y+badgeFont.ascent*badgeFontScale,
+			truncateToWidth(node.LastError, contentW),
+			mutedColor,
+		)
+		return img
 	}
-
+	if node.Wants("cpu") {
+		y = drawMeter(
+			img,
+			badgeSidePad,
+			y,
+			"CPU",
+			node.CPU,
+		)
+	}
+	if node.Wants("gpu") {
+		y = drawMeter(
+			img,
+			badgeSidePad,
+			y,
+			"GPU",
+			node.GPU,
+		)
+	}
+	if node.Wants("mem") {
+		y = drawMeter(
+			img,
+			badgeSidePad,
+			y,
+			"MEM",
+			node.MemUsed,
+		)
+	}
+	if node.Wants("swap") {
+		y = drawMeter(
+			img,
+			badgeSidePad,
+			y,
+			"SWP",
+			node.SwapUsed,
+		)
+	}
 	return img
 }
 
@@ -120,7 +179,7 @@ func nodeTileHeight(node domain.NodeState) int {
 }
 
 func meterCount(node domain.NodeState) int {
-	n := 0
+	var n int
 	for _, kind := range []string{"cpu", "gpu", "mem", "swap"} {
 		if node.Wants(kind) {
 			n++
@@ -160,7 +219,13 @@ func drawMeter(img *image.RGBA, x, y int, label string, val *float64) int {
 		valueColor = textColor
 	}
 	valueW := badgeFont.measure(valueStr, badgeFontScale)
-	drawText(img, right-valueW, baseline, valueStr, valueColor)
+	drawText(
+		img,
+		right-valueW,
+		baseline,
+		valueStr,
+		valueColor,
+	)
 	return y + meterStride(lh)
 }
 
@@ -169,7 +234,13 @@ func drawRect(img *image.RGBA, x, y, w, h int, c color.RGBA) {
 	if r.Empty() {
 		return
 	}
-	draw.Draw(img, r, &image.Uniform{C: c}, image.Point{}, draw.Src)
+	draw.Draw(
+		img,
+		r,
+		&image.Uniform{C: c},
+		image.Point{},
+		draw.Src,
+	)
 }
 
 func drawText(img *image.RGBA, x, y int, s string, c color.RGBA) {

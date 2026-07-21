@@ -70,7 +70,7 @@ func New(source badgeSource, badgeNames []string, log *slog.Logger) (*Exporter, 
 			source:     source,
 			client:     client,
 			log:        log,
-			badgeNames: append([]string(nil), badgeNames...),
+			badgeNames: append([]string{}, badgeNames...),
 		}, nil
 	}
 

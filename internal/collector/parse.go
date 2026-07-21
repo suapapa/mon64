@@ -3,7 +3,6 @@ package collector
 import (
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	dto "github.com/prometheus/client_model/go"
@@ -20,8 +19,9 @@ func parseMetrics(r io.Reader) (map[string]float64, error) {
 	}
 	out := make(map[string]float64)
 	for name, family := range families {
-		if family.GetType() != dto.MetricType_GAUGE && family.GetType() != dto.MetricType_COUNTER &&
-			family.GetType() != dto.MetricType_UNTYPED {
+		switch family.GetType() {
+		case dto.MetricType_GAUGE, dto.MetricType_COUNTER, dto.MetricType_UNTYPED:
+		default:
 			continue
 		}
 		for _, m := range family.GetMetric() {
@@ -88,41 +88,19 @@ func labeledValues(metrics map[string]float64, name string) map[string]float64 {
 // labelValue extracts a label value from a metric key like name{cpu="0",mode="idle"}.
 func labelValue(key, label string) (string, bool) {
 	needle := label + "=\""
-	idx := indexAfter(key, '{')
+	idx := strings.IndexByte(key, '{')
 	if idx < 0 {
 		return "", false
 	}
 	rest := key[idx+1:]
-	start := indexStr(rest, needle)
+	start := strings.Index(rest, needle)
 	if start < 0 {
 		return "", false
 	}
 	rest = rest[start+len(needle):]
-	end := indexStr(rest, "\"")
+	end := strings.Index(rest, "\"")
 	if end < 0 {
 		return "", false
 	}
 	return rest[:end], true
-}
-
-func indexAfter(s string, c byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == c {
-			return i
-		}
-	}
-	return -1
-}
-
-func indexStr(s, sub string) int {
-	for i := 0; i+len(sub) <= len(s); i++ {
-		if s[i:i+len(sub)] == sub {
-			return i
-		}
-	}
-	return -1
-}
-
-func parseFloat(s string) (float64, error) {
-	return strconv.ParseFloat(s, 64)
 }

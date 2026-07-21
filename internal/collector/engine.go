@@ -24,7 +24,7 @@ func NewEngine(timeout time.Duration) *Engine {
 	return &Engine{
 		scraper: NewScraper(timeout),
 		nodeExp: NewNodeExporterCollector(),
-		nvMon:   NewNvMonitorCollector(),
+		nvMon:   newNvMonitorCollector(),
 	}
 }
 

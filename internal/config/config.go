@@ -149,7 +149,9 @@ func (c *Config) validate(dummy bool) error {
 		if dummy {
 			continue
 		}
-		if n.PromFmt != PromFmtNodeExporter && n.PromFmt != PromFmtNvMonitor {
+		switch n.PromFmt {
+		case PromFmtNodeExporter, PromFmtNvMonitor:
+		default:
 			return fmt.Errorf("nodes[%d]: prom_fmt must be %q or %q", i, PromFmtNodeExporter, PromFmtNvMonitor)
 		}
 		if n.PromEndpoint == "" {
@@ -301,13 +303,14 @@ func (c *Config) validatePrometheusExports(nodeNames map[string]struct{}) error 
 func NormalizeListenPort(port string) (string, error) {
 	port = strings.TrimSpace(port)
 	if port == "" {
-		return "", fmt.Errorf("is required")
+		return "", fmt.Errorf("port %q is required", port)
 	}
 	if !strings.HasPrefix(port, ":") {
 		port = ":" + port
 	}
 	n, err := strconv.Atoi(port[1:])
-	if err != nil || n < 1 || n > 65535 {
+	outOfRange := n < 1 || n > 65535
+	if err != nil || outOfRange {
 		return "", fmt.Errorf("%q is not a valid TCP port", port)
 	}
 	return port, nil

@@ -44,7 +44,7 @@ func New(source snapshotSource, cfgs []config.PrometheusExport, log *slog.Logger
 		if err != nil {
 			return nil, fmt.Errorf("prometheus: exports[%d].port: %w", i, err)
 		}
-		nodes := append([]string(nil), c.Nodes...)
+		nodes := append([]string{}, c.Nodes...)
 		copied[i] = config.PrometheusExport{Port: addr, Nodes: nodes}
 	}
 	return &Exporter{source: source, log: log, cfgs: copied}, nil

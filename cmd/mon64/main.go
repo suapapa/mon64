@@ -93,7 +93,13 @@ func main() {
 	}
 
 	go func() {
-		if err := config.Watch(ctx, *configPath, reload, log); err != nil && ctx.Err() == nil {
+		err := config.Watch(
+			ctx,
+			*configPath,
+			reload,
+			log,
+		)
+		if err != nil && ctx.Err() == nil {
 			log.Error("config watcher stopped", "err", err)
 		}
 	}()
@@ -104,9 +110,9 @@ func main() {
 		for range sighup {
 			if err := reload(); err != nil {
 				log.Error("SIGHUP reload failed", "err", err)
-			} else {
-				log.Info("config reloaded", "reason", "SIGHUP")
+				continue
 			}
+			log.Info("config reloaded", "reason", "SIGHUP")
 		}
 	}()
 

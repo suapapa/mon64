@@ -13,7 +13,12 @@ import (
 
 // Collector derives normalized node state from Prometheus text.
 type Collector interface {
-	Collect(ctx context.Context, cfg config.NodeConfig, body io.Reader, at time.Time) domain.NodeState
+	Collect(
+		ctx context.Context,
+		cfg config.NodeConfig,
+		body io.Reader,
+		at time.Time,
+	) domain.NodeState
 }
 
 // NodeExporterCollector parses node_exporter metrics.
@@ -34,7 +39,12 @@ func NewNodeExporterCollector() *NodeExporterCollector {
 }
 
 // Collect implements Collector.
-func (c *NodeExporterCollector) Collect(ctx context.Context, cfg config.NodeConfig, body io.Reader, at time.Time) domain.NodeState {
+func (c *NodeExporterCollector) Collect(
+	ctx context.Context,
+	cfg config.NodeConfig,
+	body io.Reader,
+	at time.Time,
+) domain.NodeState {
 	state := domain.NodeState{
 		Name:        cfg.Name,
 		CollectedAt: at,
@@ -117,7 +127,8 @@ func memPercents(metrics map[string]float64) (*float64, *float64) {
 func swapUsed(metrics map[string]float64) *float64 {
 	total, okT := gaugeByName(metrics, "node_memory_SwapTotal_bytes")
 	free, okF := gaugeByName(metrics, "node_memory_SwapFree_bytes")
-	if !okT || !okF || total <= 0 {
+	haveSwap := okT && okF && total > 0
+	if !haveSwap {
 		return nil
 	}
 	u := domain.ClampPercent((total - free) / total * 100)

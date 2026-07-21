@@ -1,8 +1,9 @@
 package domain
 
-import "slices"
-
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 // Snapshot is the canonical aggregate of all node states.
 type Snapshot struct {

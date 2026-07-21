@@ -55,7 +55,7 @@ func parseBDF(data []byte) (*bdfFont, error) {
 			height:  bbh,
 			xOff:    bbx,
 			yOff:    bby,
-			rows:    append([]byte(nil), bitmap...),
+			rows:    append([]byte{}, bitmap...),
 		}
 		haveEnc = false
 		inBitmap = false
@@ -72,7 +72,7 @@ func parseBDF(data []byte) (*bdfFont, error) {
 		switch fields[0] {
 		case "FONT_ASCENT":
 			if len(fields) < 2 {
-				return nil, fmt.Errorf("bdf: bad FONT_ASCENT")
+				return nil, fmt.Errorf("bdf: bad FONT_ASCENT: %q", line)
 			}
 			v, err := strconv.Atoi(fields[1])
 			if err != nil {
@@ -81,7 +81,7 @@ func parseBDF(data []byte) (*bdfFont, error) {
 			f.ascent = v
 		case "FONT_DESCENT":
 			if len(fields) < 2 {
-				return nil, fmt.Errorf("bdf: bad FONT_DESCENT")
+				return nil, fmt.Errorf("bdf: bad FONT_DESCENT: %q", line)
 			}
 			v, err := strconv.Atoi(fields[1])
 			if err != nil {
@@ -93,7 +93,7 @@ func parseBDF(data []byte) (*bdfFont, error) {
 				return nil, err
 			}
 			if len(fields) < 2 {
-				return nil, fmt.Errorf("bdf: bad ENCODING")
+				return nil, fmt.Errorf("bdf: bad ENCODING: %q", line)
 			}
 			v, err := strconv.Atoi(fields[1])
 			if err != nil {
@@ -105,7 +105,7 @@ func parseBDF(data []byte) (*bdfFont, error) {
 			bbw, bbh, bbx, bby = 0, 0, 0, 0
 		case "DWIDTH":
 			if len(fields) < 2 {
-				return nil, fmt.Errorf("bdf: bad DWIDTH")
+				return nil, fmt.Errorf("bdf: bad DWIDTH: %q", line)
 			}
 			v, err := strconv.Atoi(fields[1])
 			if err != nil {
@@ -114,7 +114,7 @@ func parseBDF(data []byte) (*bdfFont, error) {
 			dwidth = v
 		case "BBX":
 			if len(fields) < 5 {
-				return nil, fmt.Errorf("bdf: bad BBX")
+				return nil, fmt.Errorf("bdf: bad BBX: %q", line)
 			}
 			var err error
 			bbw, err = strconv.Atoi(fields[1])
@@ -221,7 +221,13 @@ func fillScale(dst *image.RGBA, x, y, scale int, c color.RGBA) {
 	if r.Empty() {
 		return
 	}
-	draw.Draw(dst, r, &image.Uniform{C: c}, image.Point{}, draw.Src)
+	draw.Draw(
+		dst,
+		r,
+		&image.Uniform{C: c},
+		image.Point{},
+		draw.Src,
+	)
 }
 
 func (f *bdfFont) lineHeight(scale int) int {
@@ -232,7 +238,7 @@ func (f *bdfFont) measure(s string, scale int) int {
 	if scale < 1 {
 		scale = 1
 	}
-	w := 0
+	var w int
 	for _, r := range s {
 		g, ok := f.glyphs[r]
 		if !ok {

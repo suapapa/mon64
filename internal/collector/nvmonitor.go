@@ -14,13 +14,18 @@ import (
 // of nv_gpu_utilization_percent across all gpu labels.
 type NvMonitorCollector struct{}
 
-// NewNvMonitorCollector creates an nv-monitor collector.
-func NewNvMonitorCollector() *NvMonitorCollector {
+// newNvMonitorCollector creates an nv-monitor collector.
+func newNvMonitorCollector() *NvMonitorCollector {
 	return &NvMonitorCollector{}
 }
 
 // Collect implements Collector.
-func (c *NvMonitorCollector) Collect(ctx context.Context, cfg config.NodeConfig, body io.Reader, at time.Time) domain.NodeState {
+func (c *NvMonitorCollector) Collect(
+	ctx context.Context,
+	cfg config.NodeConfig,
+	body io.Reader,
+	at time.Time,
+) domain.NodeState {
 	state := domain.NodeState{
 		Name:        cfg.Name,
 		CollectedAt: at,
@@ -58,7 +63,8 @@ func (c *NvMonitorCollector) Collect(ctx context.Context, cfg config.NodeConfig,
 	}
 	if cfg.Wants(config.CollectMem) {
 		total, okT := gaugeByName(metrics, "nv_memory_total_bytes")
-		if okT && total > 0 {
+		haveMemTotal := okT && total > 0
+		if haveMemTotal {
 			if used, ok := gaugeByName(metrics, "nv_memory_used_bytes"); ok {
 				state.MemUsed = new(domain.ClampPercent(used / total * 100))
 			}
@@ -70,7 +76,8 @@ func (c *NvMonitorCollector) Collect(ctx context.Context, cfg config.NodeConfig,
 	if cfg.Wants(config.CollectSwap) {
 		total, okT := gaugeByName(metrics, "nv_swap_total_bytes")
 		used, okU := gaugeByName(metrics, "nv_swap_used_bytes")
-		if okT && okU && total > 0 {
+		haveSwap := okT && okU && total > 0
+		if haveSwap {
 			state.SwapUsed = new(domain.ClampPercent(used / total * 100))
 		}
 	}

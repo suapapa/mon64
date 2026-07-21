@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -68,10 +67,4 @@ func Watch(ctx context.Context, path string, reload func() error, log *slog.Logg
 			}
 		}
 	}
-}
-
-// FileExists reports whether path is readable.
-func FileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
