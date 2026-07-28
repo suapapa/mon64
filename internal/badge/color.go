@@ -42,10 +42,12 @@ func levelColor(pct float64) color.RGBA {
 }
 
 func lerpRGBA(a, b color.RGBA, t float64) color.RGBA {
+	// Subtract in float64 — uint8 (b-a) underflows when a channel decreases
+	// (e.g. green→orange), which produced purple midtones.
 	return color.RGBA{
-		R: uint8(math.Round(float64(a.R) + float64(b.R-a.R)*t)),
-		G: uint8(math.Round(float64(a.G) + float64(b.G-a.G)*t)),
-		B: uint8(math.Round(float64(a.B) + float64(b.B-a.B)*t)),
+		R: uint8(math.Round(float64(a.R) + (float64(b.R)-float64(a.R))*t)),
+		G: uint8(math.Round(float64(a.G) + (float64(b.G)-float64(a.G))*t)),
+		B: uint8(math.Round(float64(a.B) + (float64(b.B)-float64(a.B))*t)),
 		A: 0xff,
 	}
 }
