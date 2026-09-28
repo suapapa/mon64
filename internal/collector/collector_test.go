@@ -80,6 +80,29 @@ node_memory_SwapFree_bytes 0
 	}
 }
 
+func TestNodeExporterMemoryExcludesZFSARC(t *testing.T) {
+	c := collector.NewNodeExporterCollector()
+	node := config.NodeConfig{
+		Name:     "truenas",
+		PromFmt:  config.PromFmtNodeExporter,
+		Collects: []config.CollectKind{config.CollectMem},
+	}
+	// used = (100-10-30)/100 = 60; cached = (5+30)/100 = 35
+	body := strings.NewReader(`
+node_memory_MemTotal_bytes 100
+node_memory_MemAvailable_bytes 10
+node_memory_Cached_bytes 5
+node_zfs_arc_size 30
+`)
+	state := c.Collect(t.Context(), node, body, time.Now())
+	if state.MemUsed == nil || *state.MemUsed != 60 {
+		t.Fatalf("mem used = %v, want 60", state.MemUsed)
+	}
+	if state.MemCached == nil || *state.MemCached != 35 {
+		t.Fatalf("mem cached = %v, want 35", state.MemCached)
+	}
+}
+
 func TestNvMonitorFixture(t *testing.T) {
 	engine := collector.NewEngine(time.Second)
 	node := config.NodeConfig{

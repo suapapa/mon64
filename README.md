@@ -80,8 +80,8 @@ API responses use the in-memory snapshot from the last scheduled scrape, not liv
 ### node-exporter
 
 - **CPU**: delta of `node_cpu_seconds_total` between scrapes; `100 * (1 - idle_delta / total_delta)`. Unavailable on first scrape.
-- **Memory used**: `(MemTotal - MemAvailable) / MemTotal * 100`
-- **Memory cached**: `Cached / MemTotal * 100`
+- **Memory used**: `(MemTotal - MemAvailable - ZFS_ARC) / MemTotal * 100` (`node_zfs_arc_size` subtracted when present; reclaimable cache, not app pressure)
+- **Memory cached**: `(Cached + ZFS_ARC) / MemTotal * 100`
 - **Swap used**: `(SwapTotal - SwapFree) / SwapTotal * 100`; unavailable when `SwapTotal == 0`
 
 ### nv-monitor

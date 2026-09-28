@@ -58,7 +58,7 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 **Status:** done
 
 - [x] CPU delta from `node_cpu_seconds_total`
-- [x] Memory: MemTotal, MemAvailable, Cached
+- [x] Memory: MemTotal, MemAvailable, Cached; subtract `node_zfs_arc_size` from used when present
 - [x] Swap with zero-total edge case
 - [x] Tests with `ref/omv_*`, `ref/vraptor_*`
 

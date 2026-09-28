@@ -102,8 +102,8 @@ nodes:
   - 전체 CPU 기준으로 `100 * (1 - idle_delta / total_delta)`
   - 첫 수집처럼 이전 표본이 없으면 CPU 값을 unavailable로 둠
 - node-exporter memory:
-  - used = `(MemTotal - MemAvailable) / MemTotal * 100`
-  - cached = `Cached / MemTotal * 100`
+  - used = `(MemTotal - MemAvailable - ZFS_ARC) / MemTotal * 100` (`node_zfs_arc_size` when present)
+  - cached = `(Cached + ZFS_ARC) / MemTotal * 100`
 - node-exporter swap:
   - used = `(SwapTotal - SwapFree) / SwapTotal * 100`
   - SwapTotal이 0이면 unavailable

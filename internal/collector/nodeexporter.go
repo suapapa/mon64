@@ -113,13 +113,40 @@ func memPercents(metrics map[string]float64) (*float64, *float64) {
 	if !okT || total <= 0 {
 		return nil, nil
 	}
-	var used, cached *float64
+
+	var usedBytes float64
+	haveUsed := false
 	if avail, ok := gaugeByName(metrics, "node_memory_MemAvailable_bytes"); ok {
-		u := domain.ClampPercent((total - avail) / total * 100)
-		used = new(u)
+		usedBytes = total - avail
+		haveUsed = true
 	}
+
+	var cachedBytes float64
+	haveCached := false
 	if c, ok := gaugeByName(metrics, "node_memory_Cached_bytes"); ok {
-		cached = new(domain.ClampPercent(c / total * 100))
+		cachedBytes = c
+		haveCached = true
+	}
+
+	// ZFS ARC is reclaimable cache but is not reflected in MemAvailable or
+	// Cached; treat it as cache so mem_used shows application pressure only.
+	if arc, ok := gaugeByName(metrics, "node_zfs_arc_size"); ok && arc > 0 {
+		if haveUsed {
+			usedBytes -= arc
+			if usedBytes < 0 {
+				usedBytes = 0
+			}
+		}
+		cachedBytes += arc
+		haveCached = true
+	}
+
+	var used, cached *float64
+	if haveUsed {
+		used = new(domain.ClampPercent(usedBytes / total * 100))
+	}
+	if haveCached {
+		cached = new(domain.ClampPercent(cachedBytes / total * 100))
 	}
 	return used, cached
 }
