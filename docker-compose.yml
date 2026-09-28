@@ -10,9 +10,7 @@ services:
     # the host network to reach the device's private IP.
     network_mode: host
     volumes:
-      - ./config.yaml:/config.yaml:ro
+      - ./configs/example.yaml:/config.yaml:ro
     command:
       - "-config"
       - "/config.yaml"
-      - "-export"
-      - "pixoo64"
