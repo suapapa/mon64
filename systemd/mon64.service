@@ -1,0 +1,14 @@
+[Unit]
+Description=mon64 Prometheus aggregator
+Documentation=https://github.com/suapapa/mon64
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/mon64 -config %h/.config/mon64/config.yaml
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target
