@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/suapapa/mon64/internal/config"
+	"github.com/suapapa/mon64/internal/export/makit"
 	"github.com/suapapa/mon64/internal/export/pixoo"
 	"github.com/suapapa/mon64/internal/export/prometheus"
 	"github.com/suapapa/mon64/internal/metrics"
@@ -60,6 +61,17 @@ func main() {
 				return
 			}
 			pixooExporter.Run(ctx)
+		}()
+	}
+
+	if len(cfg.Exports.Makit64) > 0 {
+		go func() {
+			makitExporter, err := makit.New(st, cfg.Exports.Makit64, log)
+			if err != nil {
+				log.Error("makit64 exporter disabled", "err", err)
+				return
+			}
+			makitExporter.Run(ctx)
 		}()
 	}
 

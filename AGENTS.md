@@ -13,6 +13,7 @@ This document orients automated agents (and humans) working on the **mon64** rep
 - Health check (`GET /healthz`)
 - Self-metrics (`GET /metrics`)
 - Optional per-port Prometheus node exports (`exports.prometheuses`)
+- Optional makit64 CoAP export (`exports.makit64`)
 
 Requirements source of truth: `doc/PLAN.md`. Metric fixtures: `ref/*.metrics`.
 
@@ -38,7 +39,8 @@ internal/domain/      Normalized NodeState / Snapshot
 internal/collector/   Scraper, node-exporter & nv-monitor collectors
 internal/store/       Scheduler + in-memory snapshot
 internal/badge/       PNG badge renderers (rect64, circle240, fonts)
-internal/export/      JSON/YAML serialization; pixoo & prometheus exporters
+internal/export/      JSON/YAML serialization; pixoo, makit & prometheus exporters
+internal/mdns/        Pure-Go .local A lookup (no cgo) for makit64 dial
 internal/metrics/     Self-metrics registry + /metrics exposition
 internal/server/      Gin HTTP routes + middleware
 web/                  Embedded dashboard (index.html, static/)
@@ -55,7 +57,7 @@ doc/                  PLAN, REFERENCE
 4. **Scrape model**: Background goroutine collects on startup + interval; HTTP handlers read store only.
 5. **Failure isolation**: Per-node errors set `reachable: false` + `last_error`; other nodes and the server continue.
 6. **Badge types**: Named badges from config (`badges[]`). Implemented: `rect64` (64×H stacked node tiles with cpu/mem meters), `circle240` (240×240 single-node CPU/MEM gauge). Reserved: `circle128`. Meter rendering is internal to the badge type (not HTTP endpoints).
-7. **Exports**: `exports.pixoo64` auto-starts the Pixoo64 exporter (no CLI flag). Badge↔export lists must agree. `exports.prometheuses` starts dedicated `GET /metrics` listeners that expose normalized node gauges for the listed nodes only.
+7. **Exports**: `exports.pixoo64` auto-starts the Pixoo64 exporter (no CLI flag). `exports.makit64` auto-starts the makit64 CoAP exporter (`addr` default `makit.local:5683`, resolved via pure-Go mDNS; `PUT /frame` + optional `PUT /brightness`). Badge↔export lists must agree. `exports.prometheuses` starts dedicated `GET /metrics` listeners that expose normalized node gauges for the listed nodes only.
 8. **Badge fonts**: Tom Thumb BDF (`ref/tom-thumb.bdf`) for `rect64`; SUIT Heavy TTF for `circle240`. Both embedded in `internal/badge`. Load gauge colors are shared (`levelColor`: blue→green→orange→red).
 9. **Config hot-reload**: `internal/config/watcher.go` + `SIGHUP`; `listen` and export enablement/ports need process restart.
 10. **HTTP**: Gin router; handlers read store snapshot only.
@@ -77,7 +79,7 @@ go run ./cmd/mon64 -config configs/example.yaml
 
 ## Configuration reference
 
-See `configs/example.yaml`. Valid `prom_fmt`: `node-exporter`, `nv-monitor`. Valid `collects`: `cpu`, `gpu`, `mem`, `swap`. GPU is invalid for `node-exporter`. Valid `badges[].type`: `rect64`, `circle240` (`circle240` requires exactly one node). `exports.pixoo64[].badge` must reference a badge that lists `pixoo64` under `badges[].exports`. `exports.prometheuses[].port` is a TCP port (`"9100"` or `":9100"`); ports must be unique; `nodes` must name configured nodes.
+See `configs/example.yaml`. Valid `prom_fmt`: `node-exporter`, `nv-monitor`. Valid `collects`: `cpu`, `gpu`, `mem`, `swap`. GPU is invalid for `node-exporter`. Valid `badges[].type`: `rect64`, `circle240` (`circle240` requires exactly one node). `exports.pixoo64[].badge` must reference a badge that lists `pixoo64` under `badges[].exports`. `exports.makit64[].badge` must reference a badge that lists `makit64` under `badges[].exports`; optional `addr` is `host` or `host:port` (empty → `makit.local:5683`); optional `brightness` is `0`–`255`. `exports.prometheuses[].port` is a TCP port (`"9100"` or `":9100"`); ports must be unique; `nodes` must name configured nodes.
 
 ## Testing conventions
 

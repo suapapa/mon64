@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"slices"
 	"strconv"
@@ -21,6 +22,7 @@ const (
 	BadgeTypeCircle240 = "circle240"
 
 	ExportPixoo64 = "pixoo64"
+	ExportMakit64 = "makit64"
 )
 
 // CollectKind identifies which metrics to derive for a node.
@@ -46,12 +48,23 @@ type Config struct {
 // ExportsConfig binds named badges and Prometheus listeners to targets.
 type ExportsConfig struct {
 	Pixoo64      []Pixoo64Export    `yaml:"pixoo64"`
+	Makit64      []Makit64Export    `yaml:"makit64"`
 	Prometheuses []PrometheusExport `yaml:"prometheuses"`
 }
 
 // Pixoo64Export pushes one named badge to a discovered Pixoo64.
 type Pixoo64Export struct {
 	Badge string `yaml:"badge"`
+}
+
+// Makit64Export pushes one named badge to a makit64 panel over CoAP.
+// Addr is host or host:port; empty defaults to makit.local:5683.
+// Brightness is optional (0–255); when set, mon64 PUTs /brightness on start
+// and when that badge is shown.
+type Makit64Export struct {
+	Badge      string `yaml:"badge"`
+	Addr       string `yaml:"addr"`
+	Brightness *int   `yaml:"brightness"`
 }
 
 // PrometheusExport serves normalized node metrics on a dedicated port.
@@ -216,7 +229,7 @@ func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
 		exps := make(map[string]struct{}, len(b.Exports))
 		for j, exp := range b.Exports {
 			switch exp {
-			case ExportPixoo64:
+			case ExportPixoo64, ExportMakit64:
 			case "":
 				return fmt.Errorf("badges[%d].exports[%d]: name is required", i, j)
 			default:
@@ -230,6 +243,19 @@ func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
 		badgeExports[b.Name] = exps
 	}
 
+	if err := c.validatePixoo64Exports(badgeNames, badgeExports); err != nil {
+		return err
+	}
+	if err := c.validateMakit64Exports(badgeNames, badgeExports); err != nil {
+		return err
+	}
+	return c.validatePrometheusExports(nodeNames)
+}
+
+func (c *Config) validatePixoo64Exports(
+	badgeNames map[string]struct{},
+	badgeExports map[string]map[string]struct{},
+) error {
 	seenPixooBadges := make(map[string]struct{}, len(c.Exports.Pixoo64))
 	for i, exp := range c.Exports.Pixoo64 {
 		if exp.Badge == "" {
@@ -262,8 +288,118 @@ func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
 			)
 		}
 	}
+	return nil
+}
 
-	return c.validatePrometheusExports(nodeNames)
+func (c *Config) validateMakit64Exports(
+	badgeNames map[string]struct{},
+	badgeExports map[string]map[string]struct{},
+) error {
+	seenMakitBadges := make(map[string]struct{}, len(c.Exports.Makit64))
+	var sharedAddr string
+	for i, exp := range c.Exports.Makit64 {
+		if exp.Badge == "" {
+			return fmt.Errorf("exports.makit64[%d]: badge is required", i)
+		}
+		if _, ok := badgeNames[exp.Badge]; !ok {
+			return fmt.Errorf("exports.makit64[%d]: unknown badge %q", i, exp.Badge)
+		}
+		if _, dup := seenMakitBadges[exp.Badge]; dup {
+			return fmt.Errorf("exports.makit64[%d]: duplicate badge %q", i, exp.Badge)
+		}
+		seenMakitBadges[exp.Badge] = struct{}{}
+
+		addr, err := NormalizeMakit64Addr(exp.Addr)
+		if err != nil {
+			return fmt.Errorf("exports.makit64[%d].addr: %w", i, err)
+		}
+		c.Exports.Makit64[i].Addr = addr
+		if i == 0 {
+			sharedAddr = addr
+		} else if addr != sharedAddr {
+			return fmt.Errorf(
+				"exports.makit64[%d]: addr %q differs from %q; all entries share one panel",
+				i, addr, sharedAddr,
+			)
+		}
+
+		if exp.Brightness != nil {
+			level := *exp.Brightness
+			if level < 0 || level > 255 {
+				return fmt.Errorf(
+					"exports.makit64[%d]: brightness must be 0–255, got %d",
+					i, level,
+				)
+			}
+		}
+
+		if _, ok := badgeExports[exp.Badge][ExportMakit64]; !ok {
+			return fmt.Errorf(
+				"exports.makit64[%d]: badge %q must list %q under badges[].exports",
+				i, exp.Badge, ExportMakit64,
+			)
+		}
+	}
+
+	for name, exps := range badgeExports {
+		if _, wants := exps[ExportMakit64]; !wants {
+			continue
+		}
+		if _, ok := seenMakitBadges[name]; !ok {
+			return fmt.Errorf(
+				"badge %q lists export %q but is missing from exports.makit64",
+				name, ExportMakit64,
+			)
+		}
+	}
+	return nil
+}
+
+// DefaultMakit64Addr is the CoAP endpoint used when exports.makit64[].addr is empty.
+const DefaultMakit64Addr = "makit.local:5683"
+
+// NormalizeMakit64Addr accepts "", "host", or "host:port" and returns "host:port".
+// An empty addr becomes DefaultMakit64Addr. A bare host gets port 5683.
+func NormalizeMakit64Addr(addr string) (string, error) {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return DefaultMakit64Addr, nil
+	}
+	host, port, err := splitHostPort(addr)
+	if err != nil {
+		return "", err
+	}
+	if host == "" {
+		return "", fmt.Errorf("%q is missing a host", addr)
+	}
+	if port == "" {
+		port = "5683"
+	}
+	n, err := strconv.Atoi(port)
+	outOfRange := n < 1 || n > 65535
+	if err != nil || outOfRange {
+		return "", fmt.Errorf("%q is not a valid UDP port", addr)
+	}
+	return host + ":" + port, nil
+}
+
+// splitHostPort splits "host", "host:port", or "[ipv6]:port" without requiring a port.
+func splitHostPort(addr string) (host, port string, err error) {
+	if strings.HasPrefix(addr, "[") {
+		host, port, err = net.SplitHostPort(addr)
+		if err != nil {
+			return "", "", fmt.Errorf("%q is not a valid address: %w", addr, err)
+		}
+		return host, port, nil
+	}
+	if i := strings.LastIndex(addr, ":"); i >= 0 {
+		// Reject ambiguous "a:b:c" without brackets (not host:port).
+		if strings.Contains(addr[:i], ":") {
+			return "", "", fmt.Errorf("%q: use [ipv6]:port for IPv6 addresses", addr)
+		}
+		return addr[:i], addr[i+1:], nil
+	}
+	return addr, "", nil
 }
 
 func (c *Config) validatePrometheusExports(nodeNames map[string]struct{}) error {

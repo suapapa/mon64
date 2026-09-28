@@ -30,6 +30,12 @@ LAN and pushes the referenced named badge(s) after snapshot changes. Stacks
 taller than 64 pixels are scaled to fit the 64×64 display. Adding or removing
 Pixoo exports requires a process restart.
 
+When `exports.makit64` is set, mon64 pushes the referenced badge(s) over CoAP
+(`PUT /frame` RGB888 with Block1) to `exports.makit64[].addr` (default
+`makit.local:5683`). `.local` names are resolved with pure-Go mDNS (no cgo).
+Optional `brightness` (0–255) is applied via `PUT /brightness`. Adding or
+removing makit64 exports requires a process restart.
+
 When `exports.prometheuses` is set, mon64 also listens on each configured port
 and serves normalized node metrics at `GET /metrics` (listed nodes only). Port
 or enablement changes require a process restart.
@@ -49,6 +55,9 @@ See `configs/example.yaml`. Key fields:
 | `badges[].type` | Badge renderer (`rect64`, `circle240`; `circle128` reserved) |
 | `badges[].nodes` | Node names included in the named badge (order preserved) |
 | `exports.pixoo64[].badge` | Named badge to push to a discovered Pixoo64 |
+| `exports.makit64[].badge` | Named badge to push to makit64 (`makit.local` CoAP) |
+| `exports.makit64[].addr` | CoAP endpoint (`host` or `host:port`); empty → `makit.local:5683` |
+| `exports.makit64[].brightness` | Optional panel brightness `0`–`255` |
 | `exports.prometheuses[].port` | Extra listen port for a node-metrics Prometheus exporter |
 | `exports.prometheuses[].nodes` | Node names included on that exporter (order preserved) |
 

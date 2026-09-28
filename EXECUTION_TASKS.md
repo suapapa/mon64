@@ -252,9 +252,22 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 ---
 
+## T025 — makit64 CoAP exporter
+
+**Status:** done
+
+- [x] Parse/validate `exports.makit64` (badge + optional brightness 0–255)
+- [x] Cross-validate with `badges[].exports: [makit64]`
+- [x] CoAP client: `PUT /frame` RGB888 (Block1) + `PUT /brightness` to `makit.local:5683`
+- [x] Pure-Go mDNS A lookup for `.local` (works with `CGO_ENABLED=0`)
+- [x] Fit badge to 64×64; push on snapshot changes
+- [x] Wire from `cmd/mon64`; document restart requirement
+
+---
+
 ## Dependency graph
 
 ```
 T001 → T002,T003 → T004,T005 → T006,T007 → T008 → T009 → T010,T011 → T012,T013 → T014 → T015 → T016
-T017–T020,T022–T024 independent optional follow-ups
+T017–T020,T022–T025 independent optional follow-ups
 ```

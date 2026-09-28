@@ -48,6 +48,13 @@ func TestLoadExampleConfig(t *testing.T) {
 	if len(cfg.Exports.Pixoo64) != 1 || cfg.Exports.Pixoo64[0].Badge != "homin-lan" {
 		t.Fatalf("exports.pixoo64 = %#v", cfg.Exports.Pixoo64)
 	}
+	if len(cfg.Exports.Makit64) != 1 ||
+		cfg.Exports.Makit64[0].Badge != "homin-lan" ||
+		cfg.Exports.Makit64[0].Addr != config.DefaultMakit64Addr ||
+		cfg.Exports.Makit64[0].Brightness == nil ||
+		*cfg.Exports.Makit64[0].Brightness != 64 {
+		t.Fatalf("exports.makit64 = %#v", cfg.Exports.Makit64)
+	}
 	if len(cfg.Exports.Prometheuses) != 2 {
 		t.Fatalf("exports.prometheuses = %#v", cfg.Exports.Prometheuses)
 	}
@@ -88,6 +95,33 @@ nodes:
 	}
 }
 
+func TestNormalizeMakit64Addr(t *testing.T) {
+	tests := []struct {
+		in, want string
+	}{
+		{"", config.DefaultMakit64Addr},
+		{"  ", config.DefaultMakit64Addr},
+		{"makit.local", "makit.local:5683"},
+		{"makit.local:5683", "makit.local:5683"},
+		{"192.168.0.42", "192.168.0.42:5683"},
+		{"192.168.0.42:9999", "192.168.0.42:9999"},
+	}
+	for _, tc := range tests {
+		got, err := config.NormalizeMakit64Addr(tc.in)
+		if err != nil {
+			t.Fatalf("NormalizeMakit64Addr(%q): %v", tc.in, err)
+		}
+		if got != tc.want {
+			t.Fatalf("NormalizeMakit64Addr(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+	for _, bad := range []string{":5683", "host:0", "host:99999", "a:b:c"} {
+		if _, err := config.NormalizeMakit64Addr(bad); err == nil {
+			t.Fatalf("NormalizeMakit64Addr(%q) succeeded, want error", bad)
+		}
+	}
+}
+
 func TestValidateErrors(t *testing.T) {
 	tests := []struct {
 		name string
@@ -103,6 +137,9 @@ func TestValidateErrors(t *testing.T) {
 		{"circle240 needs one node", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\n  - name: y\n    prom_fmt: node-exporter\n    prom_endpoint: http://y\n    collects: [cpu]\nbadges:\n  - name: b\n    type: circle240\n    nodes: [x, y]\n"},
 		{"badge unknown node", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [missing]\n"},
 		{"export badge mismatch", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [x]\nexports:\n  pixoo64:\n    - badge: b\n"},
+		{"makit64 badge mismatch", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [x]\nexports:\n  makit64:\n    - badge: b\n      brightness: 64\n"},
+		{"makit64 bad brightness", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [x]\n    exports: [makit64]\nexports:\n  makit64:\n    - badge: b\n      brightness: 300\n"},
+		{"makit64 bad addr", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nbadges:\n  - name: b\n    type: rect64\n    nodes: [x]\n    exports: [makit64]\nexports:\n  makit64:\n    - badge: b\n      addr: \":5683\"\n"},
 		{"prometheus unknown node", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nexports:\n  prometheuses:\n    - port: \"9100\"\n      nodes: [missing]\n"},
 		{"prometheus duplicate port", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nexports:\n  prometheuses:\n    - port: \"9100\"\n      nodes: [x]\n    - port: \":9100\"\n      nodes: [x]\n"},
 		{"prometheus empty nodes", "listen: \":8080\"\nscrape_interval: 15s\nscrape_timeout: 5s\nnodes:\n  - name: x\n    prom_fmt: node-exporter\n    prom_endpoint: http://x\n    collects: [cpu]\nexports:\n  prometheuses:\n    - port: \"9100\"\n      nodes: []\n"},

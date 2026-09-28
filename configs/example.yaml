@@ -5,6 +5,10 @@ scrape_timeout: 5s
 exports:
   pixoo64:
     - badge: homin-lan
+  makit64:
+    - badge: homin-lan
+      # addr: makit.local:5683  # optional; empty → makit.local:5683
+      brightness: 64 # 0–255; omit to leave panel brightness unchanged
   prometheuses:
     - port: "9100"
       nodes:
@@ -22,6 +26,7 @@ badges:
       - omv
     exports:
       - pixoo64
+      - makit64
   - name: homin-dev
     type: circle240
     nodes:
