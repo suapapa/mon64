@@ -20,9 +20,6 @@ const (
 	// BadgeTypeCircle128 is reserved; not implemented yet.
 	BadgeTypeCircle128 = "circle128"
 	BadgeTypeCircle240 = "circle240"
-
-	ExportPixoo64 = "pixoo64"
-	ExportMakit64 = "makit64"
 )
 
 // CollectKind identifies which metrics to derive for a node.
@@ -75,10 +72,9 @@ type PrometheusExport struct {
 
 // BadgeConfig describes a named composite badge.
 type BadgeConfig struct {
-	Name    string   `yaml:"name"`
-	Type    string   `yaml:"type"`
-	Nodes   []string `yaml:"nodes"`
-	Exports []string `yaml:"exports"`
+	Name  string   `yaml:"name"`
+	Type  string   `yaml:"type"`
+	Nodes []string `yaml:"nodes"`
 }
 
 // NodeConfig describes one monitored endpoint.
@@ -185,7 +181,6 @@ func (c *Config) validate(dummy bool) error {
 
 func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
 	badgeNames := make(map[string]struct{}, len(c.Badges))
-	badgeExports := make(map[string]map[string]struct{}, len(c.Badges))
 
 	for i, b := range c.Badges {
 		if b.Name == "" {
@@ -225,37 +220,18 @@ func (c *Config) validateBadgesAndExports(nodeNames map[string]struct{}) error {
 			}
 			seenNodes[nodeName] = struct{}{}
 		}
-
-		exps := make(map[string]struct{}, len(b.Exports))
-		for j, exp := range b.Exports {
-			switch exp {
-			case ExportPixoo64, ExportMakit64:
-			case "":
-				return fmt.Errorf("badges[%d].exports[%d]: name is required", i, j)
-			default:
-				return fmt.Errorf("badges[%d].exports[%d]: unknown export %q", i, j, exp)
-			}
-			if _, dup := exps[exp]; dup {
-				return fmt.Errorf("badges[%d].exports[%d]: duplicate export %q", i, j, exp)
-			}
-			exps[exp] = struct{}{}
-		}
-		badgeExports[b.Name] = exps
 	}
 
-	if err := c.validatePixoo64Exports(badgeNames, badgeExports); err != nil {
+	if err := c.validatePixoo64Exports(badgeNames); err != nil {
 		return err
 	}
-	if err := c.validateMakit64Exports(badgeNames, badgeExports); err != nil {
+	if err := c.validateMakit64Exports(badgeNames); err != nil {
 		return err
 	}
 	return c.validatePrometheusExports(nodeNames)
 }
 
-func (c *Config) validatePixoo64Exports(
-	badgeNames map[string]struct{},
-	badgeExports map[string]map[string]struct{},
-) error {
+func (c *Config) validatePixoo64Exports(badgeNames map[string]struct{}) error {
 	seenPixooBadges := make(map[string]struct{}, len(c.Exports.Pixoo64))
 	for i, exp := range c.Exports.Pixoo64 {
 		if exp.Badge == "" {
@@ -268,33 +244,11 @@ func (c *Config) validatePixoo64Exports(
 			return fmt.Errorf("exports.pixoo64[%d]: duplicate badge %q", i, exp.Badge)
 		}
 		seenPixooBadges[exp.Badge] = struct{}{}
-
-		if _, ok := badgeExports[exp.Badge][ExportPixoo64]; !ok {
-			return fmt.Errorf(
-				"exports.pixoo64[%d]: badge %q must list %q under badges[].exports",
-				i, exp.Badge, ExportPixoo64,
-			)
-		}
-	}
-
-	for name, exps := range badgeExports {
-		if _, wants := exps[ExportPixoo64]; !wants {
-			continue
-		}
-		if _, ok := seenPixooBadges[name]; !ok {
-			return fmt.Errorf(
-				"badge %q lists export %q but is missing from exports.pixoo64",
-				name, ExportPixoo64,
-			)
-		}
 	}
 	return nil
 }
 
-func (c *Config) validateMakit64Exports(
-	badgeNames map[string]struct{},
-	badgeExports map[string]map[string]struct{},
-) error {
+func (c *Config) validateMakit64Exports(badgeNames map[string]struct{}) error {
 	seenMakitBadges := make(map[string]struct{}, len(c.Exports.Makit64))
 	var sharedAddr string
 	for i, exp := range c.Exports.Makit64 {
@@ -331,25 +285,6 @@ func (c *Config) validateMakit64Exports(
 					i, level,
 				)
 			}
-		}
-
-		if _, ok := badgeExports[exp.Badge][ExportMakit64]; !ok {
-			return fmt.Errorf(
-				"exports.makit64[%d]: badge %q must list %q under badges[].exports",
-				i, exp.Badge, ExportMakit64,
-			)
-		}
-	}
-
-	for name, exps := range badgeExports {
-		if _, wants := exps[ExportMakit64]; !wants {
-			continue
-		}
-		if _, ok := seenMakitBadges[name]; !ok {
-			return fmt.Errorf(
-				"badge %q lists export %q but is missing from exports.makit64",
-				name, ExportMakit64,
-			)
 		}
 	}
 	return nil

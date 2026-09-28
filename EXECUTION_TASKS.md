@@ -232,7 +232,7 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 
 **Status:** done
 
-- [x] Parse `badges[]` / `exports.pixoo64` in config with cross-validation
+- [x] Parse `badges[]` / `exports.pixoo64` in config (`exports.*.badge` → badge name)
 - [x] Badge type registry; implement `rect64` (meters under type, not HTTP)
 - [x] `GET /api/v1/badge/{badge_name}` only (remove per-node / all-stack routes)
 - [x] Dashboard shows configured named badges
@@ -257,7 +257,6 @@ Agents: pick the next `pending` task, set to `in_progress`, implement, verify (`
 **Status:** done
 
 - [x] Parse/validate `exports.makit64` (badge + optional brightness 0–255)
-- [x] Cross-validate with `badges[].exports: [makit64]`
 - [x] CoAP client: `PUT /frame` RGB888 (Block1) + `PUT /brightness` to `makit.local:5683`
 - [x] Pure-Go mDNS A lookup for `.local` (works with `CGO_ENABLED=0`)
 - [x] Fit badge to 64×64; push on snapshot changes

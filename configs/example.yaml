@@ -15,7 +15,7 @@ exports:
         - spark
     - port: "9101"
       nodes:
-        - omv
+        - truenas
 
 badges:
   - name: homin-lan
@@ -23,14 +23,11 @@ badges:
     nodes:
       - spark
       - vraptor
-      - omv
-    exports:
-      - pixoo64
-      - makit64
+      - truenas
   - name: homin-dev
     type: circle240
     nodes:
-      - omv
+      - truenas
 
 nodes:
   - name: spark
@@ -49,9 +46,9 @@ nodes:
       - cpu
       - mem
 
-  - name: omv
+  - name: truenas
     prom_fmt: node-exporter
-    prom_endpoint: http://omv.local:9100/metrics
+    prom_endpoint: http://truenas.local:9100/metrics
     collects:
       - cpu
       - mem
